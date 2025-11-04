@@ -1,7 +1,7 @@
 {
-  "name": "@sugar/ui-react",
+  "name": "@ui/react-components",
   "version": "0.1.0",
-  "description": "Agnostic React components library for Sugar CRM products",
+  "description": "Agnostic React components library",
   "type": "module",
   "main": "dist/index.js",
   "module": "dist/index.esm.js",
@@ -37,6 +37,7 @@
     "@storybook/react": "^7.0.0",
     "@storybook/react-vite": "^7.0.0",
     "@tailwindcss/cli": "^4.0.0",
+    "@tailwindcss/postcss": "^4.1.16",
     "@testing-library/jest-dom": "^6.0.0",
     "@testing-library/react": "^14.0.0",
     "@testing-library/user-event": "^14.0.0",
@@ -45,6 +46,7 @@
     "@types/react-dom": "^18.3.7",
     "@typescript-eslint/eslint-plugin": "^6.0.0",
     "@typescript-eslint/parser": "^6.0.0",
+    "@vitejs/plugin-react": "^5.1.0",
     "eslint": "^8.0.0",
     "eslint-plugin-react": "^7.0.0",
     "eslint-plugin-react-hooks": "^4.0.0",
@@ -57,21 +59,21 @@
     "rollup-plugin-peer-deps-external": "^2.2.4",
     "rollup-plugin-postcss": "^4.0.2",
     "storybook": "^7.0.0",
+    "tailwindcss": "^4.1.16",
     "ts-jest": "^29.0.0",
     "typescript": "^5.0.0"
   },
   "keywords": [
     "react",
     "components",
-    "sugar",
-    "crm",
     "ui",
-    "typescript"
+    "typescript",
+    "tailwind"
   ],
-  "author": "Sugar CRM",
+  "author": "",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/sugarcrm/sugar-ui-react.git"
+    "url": ""
   }
 }

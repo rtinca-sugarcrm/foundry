@@ -1,300 +1,287 @@
 import type { Meta, StoryObj } from '@storybook/react';
-import { action } from '@storybook/addon-actions';
-import { EnumField } from './EnumField';
-import { SugarThemeProvider } from '../../design-system/ThemeProvider';
-import { defaultTheme } from '../../design-system/theme';
-import { EnumFieldMetadata } from './types';
-import { required } from '../../core/validation';
-import { minSelections } from './validation';
+import { useState } from 'react';
+import { EnumField, EnumOption } from './EnumField';
 
-// Sample enum options
-const statusOptions = [
-    { value: 'active', label: 'Active' },
-    { value: 'inactive', label: 'Inactive' },
-    { value: 'pending', label: 'Pending' },
+const statusOptions: EnumOption[] = [
+    { value: 'new', label: 'New' },
+    { value: 'in_progress', label: 'In Progress' },
+    { value: 'completed', label: 'Completed' },
     { value: 'archived', label: 'Archived' },
 ];
 
-const industryOptions = [
+const industryOptions: EnumOption[] = [
     { value: 'tech', label: 'Technology' },
     { value: 'finance', label: 'Financial Services' },
     { value: 'healthcare', label: 'Healthcare' },
     { value: 'retail', label: 'Retail' },
     { value: 'manufacturing', label: 'Manufacturing' },
     { value: 'education', label: 'Education' },
+    { value: 'consulting', label: 'Consulting' },
+    { value: 'media', label: 'Media & Entertainment' },
 ];
 
 const meta: Meta<typeof EnumField> = {
-    title: 'Sugar UI/Atoms/EnumField',
+    title: 'Components/EnumField',
     component: EnumField,
-    decorators: [
-        (Story) => (
-            <SugarThemeProvider theme={defaultTheme}>
-                <div style={{ padding: '20px', maxWidth: '400px' }}>
-                    <Story />
-                </div>
-            </SugarThemeProvider>
-        ),
-    ],
     parameters: {
-        layout: 'centered',
-        docs: {
-            description: {
-                component:
-                    'An atomic enum field component with CSS-in-JS styling and advanced state management.',
-            },
-        },
+        layout: 'padded',
     },
 };
 
 export default meta;
 type Story = StoryObj<typeof EnumField>;
 
-// Basic dropdown
-export const BasicDropdown: Story = {
-    args: {
-        value: 'active',
-        metadata: {
-            name: 'status',
-            label: 'Account Status',
-            options: statusOptions,
-            placeholder: 'Select a status...',
-            help: 'Choose the current status',
-        } as EnumFieldMetadata,
-        events: {
-            onChange: action('onChange'),
-            onValidate: action('onValidate'),
-        },
+export const EditMode: Story = {
+    render: () => {
+        const [value, setValue] = useState<string | null>('new');
+
+        return (
+            <div style={{ width: '350px' }}>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Status (Edit Mode)
+                </label>
+                <EnumField
+                    value={value}
+                    options={statusOptions}
+                    mode="edit"
+                    placeholder="Select status..."
+                    onChange={(newValue) => {
+                        console.log('Changed:', newValue);
+                        setValue(newValue as string);
+                    }}
+                />
+                <p className="mt-2 text-xs text-gray-500">
+                    Selected: <strong>{value || 'none'}</strong>
+                </p>
+            </div>
+        );
     },
 };
 
-// Required field with validation
-export const RequiredField: Story = {
-    args: {
-        value: '',
-        metadata: {
-            name: 'priority',
-            label: 'Priority Level',
-            required: true,
-            options: statusOptions,
-            placeholder: 'Select priority...',
-            help: 'This field is required',
-        } as EnumFieldMetadata,
-        validators: [required('Priority is required')],
-        events: {
-            onChange: action('onChange'),
-            onValidate: action('onValidate'),
-        },
+export const ReadonlyMode: Story = {
+    render: () => {
+        return (
+            <div style={{ width: '350px' }}>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Status (Readonly Mode)
+                </label>
+                <EnumField
+                    value="in_progress"
+                    options={statusOptions}
+                    mode="readonly"
+                    placeholder="Select status..."
+                />
+                <p className="mt-2 text-xs text-gray-500">Displays value as plain text</p>
+            </div>
+        );
     },
 };
 
-// Multi-select with checkboxes
-export const MultiSelectCheckbox: Story = {
-    args: {
-        value: ['tech', 'finance'],
-        metadata: {
-            name: 'industries',
-            label: 'Target Industries',
-            multiple: true,
-            required: true,
-            options: industryOptions,
-            display: 'checkbox',
-            help: 'Select all applicable industries',
-        } as EnumFieldMetadata,
-        validators: [
-            required('At least one industry is required'),
-            minSelections(1, 'Please select at least one industry'),
-        ],
-        events: {
-            onChange: action('onChange'),
-            onValidate: action('onValidate'),
-        },
+export const DisabledMode: Story = {
+    render: () => {
+        return (
+            <div style={{ width: '350px' }}>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Status (Disabled Mode)
+                </label>
+                <EnumField
+                    value="completed"
+                    options={statusOptions}
+                    mode="disabled"
+                    placeholder="Select status..."
+                />
+                <p className="mt-2 text-xs text-gray-500">Dropdown visible but not interactable</p>
+            </div>
+        );
     },
 };
 
-// Searchable dropdown
-export const SearchableDropdown: Story = {
-    args: {
-        value: 'tech',
-        metadata: {
-            name: 'industry',
-            label: 'Primary Industry',
-            options: industryOptions,
-            searchable: true,
-            placeholder: 'Search industries...',
-            help: 'Type to search for industries',
-        } as EnumFieldMetadata,
-        events: {
-            onChange: action('onChange'),
-            onValidate: action('onValidate'),
-        },
+export const Required: Story = {
+    render: () => {
+        const [value, setValue] = useState<string | null>(null);
+        const [error, setError] = useState<string>('');
+
+        return (
+            <div style={{ width: '350px' }}>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Status <span className="text-red-500">*</span>
+                </label>
+                <EnumField
+                    value={value}
+                    options={statusOptions}
+                    required
+                    placeholder="Select status..."
+                    error={error}
+                    onChange={(newValue) => {
+                        setValue(newValue as string);
+                        setError(newValue ? '' : 'This field is required');
+                    }}
+                />
+                <p className="mt-2 text-xs text-gray-500">Try submitting without a value</p>
+            </div>
+        );
     },
 };
 
-// Radio buttons
-export const RadioButtons: Story = {
-    args: {
-        value: 'active',
-        metadata: {
-            name: 'status',
-            label: 'Status',
-            options: statusOptions.slice(0, 3),
-            display: 'radio',
-            help: 'Select one option',
-        } as EnumFieldMetadata,
-        events: {
-            onChange: action('onChange'),
-            onValidate: action('onValidate'),
-        },
+export const MultiSelect: Story = {
+    render: () => {
+        const [value, setValue] = useState<string[]>(['tech', 'finance']);
+
+        return (
+            <div style={{ width: '350px' }}>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Industries (Multi-select)
+                </label>
+                <EnumField
+                    value={value}
+                    options={industryOptions}
+                    multiple
+                    placeholder="Select industries..."
+                    onChange={(newValue) => {
+                        console.log('Changed:', newValue);
+                        setValue((newValue as string[]) || []);
+                    }}
+                />
+                <p className="mt-2 text-xs text-gray-500">
+                    Selected ({value.length}): {value.length > 0 ? value.join(', ') : 'none'}
+                </p>
+            </div>
+        );
     },
 };
 
-// Readonly field
-export const ReadonlyField: Story = {
-    args: {
-        value: 'active',
-        metadata: {
-            name: 'status',
-            label: 'Record Status',
-            readonly: true,
-            options: statusOptions,
-            help: 'This field cannot be edited',
-        } as EnumFieldMetadata,
+export const Searchable: Story = {
+    render: () => {
+        const [value, setValue] = useState<string | null>(null);
+
+        return (
+            <div style={{ width: '350px' }}>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Industry (Searchable)
+                </label>
+                <EnumField
+                    value={value}
+                    options={industryOptions}
+                    searchable
+                    placeholder="Search industries..."
+                    onChange={(newValue) => {
+                        console.log('Changed:', newValue);
+                        setValue(newValue as string);
+                    }}
+                />
+                <p className="mt-2 text-xs text-gray-500">Type to filter options</p>
+            </div>
+        );
     },
 };
 
-// Disabled field
-export const DisabledField: Story = {
-    args: {
-        value: 'pending',
-        metadata: {
-            name: 'status',
-            label: 'Processing Status',
-            disabled: true,
-            options: statusOptions,
-            help: 'This field is temporarily disabled',
-        } as EnumFieldMetadata,
+export const SearchableMultiSelect: Story = {
+    render: () => {
+        const [value, setValue] = useState<string[]>([]);
+
+        return (
+            <div style={{ width: '350px' }}>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Industries (Searchable Multi-select)
+                </label>
+                <EnumField
+                    value={value}
+                    options={industryOptions}
+                    multiple
+                    searchable
+                    placeholder="Search and select..."
+                    onChange={(newValue) => {
+                        console.log('Changed:', newValue);
+                        setValue((newValue as string[]) || []);
+                    }}
+                />
+                <p className="mt-2 text-xs text-gray-500">
+                    Selected ({value.length}): {value.length > 0 ? value.join(', ') : 'none'}
+                </p>
+            </div>
+        );
     },
 };
 
-// With custom theme
-export const CustomTheme: Story = {
-    decorators: [
-        (Story) => (
-            <SugarThemeProvider
-                theme={{
-                    colors: {
-                        ...defaultTheme.colors,
-                        primary: '#8b5cf6',
-                        primaryHover: '#7c3aed',
-                    },
-                    borderRadius: {
-                        sm: '8px',
-                        md: '12px',
-                        lg: '16px',
-                    },
-                }}
-            >
-                <div style={{ padding: '20px', maxWidth: '400px' }}>
-                    <Story />
+export const WithError: Story = {
+    render: () => {
+        const [value, setValue] = useState<string | null>(null);
+
+        return (
+            <div style={{ width: '350px' }}>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                <EnumField
+                    value={value}
+                    options={statusOptions}
+                    placeholder="Select status..."
+                    error="This field is required"
+                    onChange={(newValue) => {
+                        setValue(newValue as string);
+                    }}
+                />
+            </div>
+        );
+    },
+};
+
+export const DisabledOptions: Story = {
+    render: () => {
+        const [value, setValue] = useState<string | null>('new');
+
+        const optionsWithDisabled: EnumOption[] = [
+            { value: 'new', label: 'New' },
+            { value: 'in_progress', label: 'In Progress' },
+            { value: 'completed', label: 'Completed', disabled: true },
+            { value: 'archived', label: 'Archived', disabled: true },
+        ];
+
+        return (
+            <div style={{ width: '350px' }}>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                <EnumField
+                    value={value}
+                    options={optionsWithDisabled}
+                    placeholder="Select status..."
+                    onChange={(newValue) => {
+                        setValue(newValue as string);
+                    }}
+                />
+                <p className="mt-2 text-xs text-gray-500">Completed and Archived are disabled</p>
+            </div>
+        );
+    },
+};
+
+export const AllModeComparison: Story = {
+    render: () => {
+        return (
+            <div style={{ width: '350px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Edit Mode (Interactive)
+                    </label>
+                    <EnumField
+                        value="in_progress"
+                        options={statusOptions}
+                        mode="edit"
+                        onChange={() => {}}
+                    />
                 </div>
-            </SugarThemeProvider>
-        ),
-    ],
-    args: {
-        value: 'tech',
-        metadata: {
-            name: 'industry',
-            label: 'Industry (Custom Theme)',
-            options: industryOptions,
-            placeholder: 'Select industry...',
-            help: 'This uses a custom purple theme',
-        } as EnumFieldMetadata,
-        events: {
-            onChange: action('onChange'),
-        },
-    },
-};
 
-// Error state
-export const WithErrors: Story = {
-    args: {
-        value: '',
-        metadata: {
-            name: 'required_field',
-            label: 'Required Selection',
-            required: true,
-            options: statusOptions,
-            placeholder: 'Please select...',
-        } as EnumFieldMetadata,
-        validators: [required('This field is required')],
-        state: {
-            errors: ['This field is required', 'Please make a selection'],
-            isValid: false,
-            isTouched: true,
-        },
-        events: {
-            onChange: action('onChange'),
-            onValidate: action('onValidate'),
-        },
-    },
-};
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Readonly Mode (Text Only)
+                    </label>
+                    <EnumField value="in_progress" options={statusOptions} mode="readonly" />
+                </div>
 
-// Multi-select dropdown
-export const MultiSelectDropdown: Story = {
-    args: {
-        value: ['javascript', 'react', 'nodejs'],
-        metadata: {
-            name: 'skills',
-            label: 'Skills & Technologies',
-            multiple: true,
-            options: [
-                { value: 'javascript', label: 'JavaScript' },
-                { value: 'typescript', label: 'TypeScript' },
-                { value: 'react', label: 'React' },
-                { value: 'vue', label: 'Vue.js' },
-                { value: 'angular', label: 'Angular' },
-                { value: 'nodejs', label: 'Node.js' },
-                { value: 'python', label: 'Python' },
-                { value: 'java', label: 'Java' },
-            ],
-            placeholder: 'Select multiple skills...',
-            help: 'Click items to select/deselect multiple options',
-        } as EnumFieldMetadata,
-        events: {
-            onChange: action('onChange'),
-            onValidate: action('onValidate'),
-        },
-    },
-};
-
-// Multi-select with search
-export const MultiSelectWithSearch: Story = {
-    args: {
-        value: ['us', 'uk'],
-        metadata: {
-            name: 'countries',
-            label: 'Target Countries',
-            multiple: true,
-            searchable: true,
-            options: [
-                { value: 'us', label: 'United States' },
-                { value: 'uk', label: 'United Kingdom' },
-                { value: 'ca', label: 'Canada' },
-                { value: 'au', label: 'Australia' },
-                { value: 'de', label: 'Germany' },
-                { value: 'fr', label: 'France' },
-                { value: 'jp', label: 'Japan' },
-                { value: 'cn', label: 'China' },
-                { value: 'in', label: 'India' },
-                { value: 'br', label: 'Brazil' },
-            ],
-            placeholder: 'Search and select countries...',
-            help: 'Type to filter, click to select multiple',
-        } as EnumFieldMetadata,
-        events: {
-            onChange: action('onChange'),
-            onValidate: action('onValidate'),
-        },
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Disabled Mode (Greyed Out)
+                    </label>
+                    <EnumField value="in_progress" options={statusOptions} mode="disabled" />
+                </div>
+            </div>
+        );
     },
 };

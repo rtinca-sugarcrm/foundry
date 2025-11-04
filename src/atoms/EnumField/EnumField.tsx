@@ -1,384 +1,295 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
-import clsx from 'clsx';
-import { BaseFieldProps } from '../../core/types';
-import { useFieldState } from '../../core/useFieldState';
-import { useSugarTheme } from '../../design-system/ThemeProvider';
-import { required } from '../../core/validation';
-import { EnumFieldMetadata, EnumValues, EnumOption, EnumFieldState } from './types';
-import { minSelections, validOptions } from './validation';
-import { enumFieldStyles } from './styles';
+import React, { useState, useRef, useEffect } from 'react';
 
-export interface EnumFieldProps extends BaseFieldProps<EnumValues, EnumFieldMetadata> {}
+export interface EnumOption {
+    value: string;
+    label: string;
+    disabled?: boolean;
+}
+
+export interface EnumFieldProps {
+    value: string | string[] | null;
+    options: EnumOption[];
+    mode?: 'edit' | 'readonly' | 'disabled';
+    multiple?: boolean;
+    searchable?: boolean;
+    required?: boolean;
+    placeholder?: string;
+    error?: string;
+    onChange?: (value: string | string[] | null) => void;
+}
 
 export const EnumField: React.FC<EnumFieldProps> = ({
     value,
-    metadata,
-    state: externalState,
-    events = {},
-    validators = [],
-    inputProps = {},
+    options,
+    mode = 'edit',
+    multiple = false,
+    searchable = false,
+    required = false,
+    placeholder = 'Select...',
+    error,
+    onChange,
 }) => {
-    const theme = useSugarTheme();
-    const styles = enumFieldStyles(theme);
-
-    // Local component state
-    const [componentState, setComponentState] = useState<EnumFieldState>({
-        isOpen: false,
-        searchQuery: '',
-        focusedIndex: -1,
-    });
-
-    const dropdownRef = useRef<HTMLDivElement>(null);
+    const [isOpen, setIsOpen] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+    const containerRef = useRef<HTMLDivElement>(null);
     const searchInputRef = useRef<HTMLInputElement>(null);
 
-    // Build validators
-    const allValidators = [
-        ...validators,
-        ...(metadata.required ? [required()] : []),
-        validOptions(metadata.options.map((opt) => opt.value)),
-        ...(metadata.multiple && metadata.required ? [minSelections(1)] : []),
-    ];
+    const isReadonly = mode === 'readonly';
+    const isDisabled = mode === 'disabled';
 
-    // Field state management
-    const fieldState = useFieldState({
-        initialValue: value,
-        validators: allValidators,
-        fieldName: metadata.name,
-        required: metadata.required,
-        onChange: events.onChange,
-        onValidate: events.onValidate,
-    });
-
-    const currentState = { ...fieldState.state, ...externalState };
-
-    // Filter options based on search
-    const filteredOptions = metadata.searchable
-        ? metadata.options.filter((option) =>
-              option.label.toLowerCase().includes(componentState.searchQuery.toLowerCase())
-          )
-        : metadata.options;
-
-    // Get selected options
-    const selectedValues = Array.isArray(fieldState.value) ? fieldState.value : [fieldState.value];
-
-    // Handle option selection
-    const handleOptionSelect = useCallback(
-        (option: EnumOption) => {
-            if (option.disabled) return;
-
-            let newValue: EnumValues;
-
-            if (metadata.multiple) {
-                const currentValues = Array.isArray(fieldState.value) ? fieldState.value : [];
-                if (currentValues.includes(option.value)) {
-                    newValue = currentValues.filter((v) => v !== option.value);
-                } else {
-                    newValue = [...currentValues, option.value];
-                }
-            } else {
-                newValue = option.value;
-                setComponentState((prev) => ({ ...prev, isOpen: false }));
-            }
-
-            fieldState.handleChange(newValue);
-        },
-        [metadata.multiple, fieldState]
-    );
-
-    // Handle dropdown toggle
-    const toggleDropdown = useCallback(() => {
-        if (metadata.readonly || metadata.disabled) return;
-
-        setComponentState((prev) => ({
-            ...prev,
-            isOpen: !prev.isOpen,
-            searchQuery: '',
-            focusedIndex: -1,
-        }));
-    }, [metadata.readonly, metadata.disabled]);
-
-    // Handle search
-    const handleSearch = useCallback((query: string) => {
-        setComponentState((prev) => ({
-            ...prev,
-            searchQuery: query,
-            focusedIndex: -1,
-        }));
-    }, []);
-
-    // Handle keyboard navigation
-    const handleKeyDown = useCallback(
-        (e: React.KeyboardEvent) => {
-            if (!componentState.isOpen) {
-                if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    toggleDropdown();
-                }
-                return;
-            }
-
-            switch (e.key) {
-                case 'Escape':
-                    setComponentState((prev) => ({ ...prev, isOpen: false }));
-                    break;
-                case 'ArrowDown':
-                    e.preventDefault();
-                    setComponentState((prev) => ({
-                        ...prev,
-                        focusedIndex: Math.min(prev.focusedIndex + 1, filteredOptions.length - 1),
-                    }));
-                    break;
-                case 'ArrowUp':
-                    e.preventDefault();
-                    setComponentState((prev) => ({
-                        ...prev,
-                        focusedIndex: Math.max(prev.focusedIndex - 1, 0),
-                    }));
-                    break;
-                case 'Enter':
-                    e.preventDefault();
-                    if (componentState.focusedIndex >= 0) {
-                        handleOptionSelect(filteredOptions[componentState.focusedIndex]);
-                    }
-                    break;
-            }
-        },
-        [
-            componentState.isOpen,
-            componentState.focusedIndex,
-            filteredOptions,
-            toggleDropdown,
-            handleOptionSelect,
-        ]
-    );
-
-    // Handle click outside
+    // Close dropdown on outside click
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-                setComponentState((prev) => ({ ...prev, isOpen: false }));
+            if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+                setIsOpen(false);
+                setSearchQuery('');
             }
         };
 
-        if (componentState.isOpen) {
+        if (isOpen) {
             document.addEventListener('mousedown', handleClickOutside);
             return () => document.removeEventListener('mousedown', handleClickOutside);
         }
-    }, [componentState.isOpen]);
+    }, [isOpen]);
 
     // Focus search input when dropdown opens
     useEffect(() => {
-        if (componentState.isOpen && metadata.searchable && searchInputRef.current) {
+        if (isOpen && searchable && searchInputRef.current) {
             searchInputRef.current.focus();
         }
-    }, [componentState.isOpen, metadata.searchable]);
+    }, [isOpen, searchable]);
 
-    // Render value display
-    const renderValue = () => {
-        if (metadata.renderValue) {
-            return metadata.renderValue(fieldState.value, metadata.options);
+    // Get display text for selected value(s)
+    const displayText = (() => {
+        if (!value || (Array.isArray(value) && value.length === 0)) {
+            return placeholder;
         }
 
-        if (
-            !fieldState.value ||
-            (Array.isArray(fieldState.value) && fieldState.value.length === 0)
-        ) {
-            return <span style={styles.placeholder}>{metadata.placeholder}</span>;
+        if (Array.isArray(value)) {
+            const selectedLabels = options
+                .filter((opt) => value.includes(opt.value))
+                .map((opt) => opt.label);
+            return selectedLabels.length > 0 ? selectedLabels.join(', ') : placeholder;
         }
 
-        if (Array.isArray(fieldState.value)) {
-            const labels = fieldState.value
-                .map((v) => metadata.options.find((opt) => opt.value === v)?.label)
-                .filter(Boolean);
-            return labels.join(', ');
-        }
+        const selectedOption = options.find((opt) => opt.value === value);
+        return selectedOption?.label || placeholder;
+    })();
 
-        const option = metadata.options.find((opt) => opt.value === fieldState.value);
-        return option?.label || fieldState.value;
-    };
+    // Handle option selection
+    const handleSelectOption = (optionValue: string) => {
+        if (isDisabled) return;
 
-    // Render option
-    const renderOption = (option: EnumOption, index: number) => {
-        const isSelected = selectedValues.includes(option.value);
-        const isFocused = index === componentState.focusedIndex;
-
-        if (metadata.renderOption) {
-            return metadata.renderOption(option, isSelected);
-        }
-
-        const optionStyle = {
-            ...styles.option,
-            ...(isSelected ? styles.optionSelected : {}),
-            ...(option.disabled ? styles.optionDisabled : {}),
-            ...(isFocused ? { backgroundColor: theme.colors.background.secondary } : {}),
-        };
-
-        return (
-            <div
-                key={option.value}
-                style={optionStyle}
-                onClick={() => handleOptionSelect(option)}
-                onMouseEnter={() => setComponentState((prev) => ({ ...prev, focusedIndex: index }))}
-            >
-                {metadata.multiple && (
-                    <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={() => {}} // Handled by parent click
-                        style={styles.checkboxInput}
-                        tabIndex={-1}
-                    />
-                )}
-                <span style={styles.optionLabel}>{option.label}</span>
-            </div>
-        );
-    };
-
-    // Render dropdown
-    const renderDropdown = () => (
-        <div ref={dropdownRef} style={styles.container}>
-            <div
-                style={styles.dropdownTrigger}
-                onClick={toggleDropdown}
-                onKeyDown={handleKeyDown}
-                tabIndex={metadata.disabled ? -1 : 0}
-                {...inputProps}
-            >
-                <div style={styles.dropdownValue}>{renderValue()}</div>
-                <span style={styles.dropdownArrow}>▼</span>
-            </div>
-
-            {componentState.isOpen && (
-                <div style={styles.dropdownMenu}>
-                    {metadata.searchable && (
-                        <input
-                            ref={searchInputRef}
-                            type="text"
-                            placeholder="Search options..."
-                            value={componentState.searchQuery}
-                            onChange={(e) => handleSearch(e.target.value)}
-                            style={styles.searchInput}
-                        />
-                    )}
-
-                    {metadata.allowEmpty && !metadata.multiple && (
-                        <div
-                            style={{
-                                ...styles.option,
-                                ...(fieldState.value === undefined ||
-                                fieldState.value === null ||
-                                fieldState.value === ''
-                                    ? styles.optionSelected
-                                    : {}),
-                            }}
-                            onClick={() => fieldState.handleChange(metadata.multiple ? [] : '')}
-                        >
-                            <span style={styles.optionLabel}>{metadata.placeholder || 'None'}</span>
-                        </div>
-                    )}
-
-                    {filteredOptions.map(renderOption)}
-
-                    {filteredOptions.length === 0 && metadata.searchable && (
-                        <div style={styles.option}>
-                            <span style={styles.optionLabel}>No options found</span>
-                        </div>
-                    )}
-                </div>
-            )}
-        </div>
-    );
-
-    // Render radio group
-    const renderRadioGroup = () => (
-        <div style={styles.radioGroup}>
-            {metadata.options.map((option) => (
-                <label key={option.value} style={styles.radioOption}>
-                    <input
-                        type="radio"
-                        name={metadata.name}
-                        value={option.value}
-                        checked={fieldState.value === option.value}
-                        disabled={option.disabled || metadata.disabled}
-                        onChange={() => handleOptionSelect(option)}
-                        style={styles.radioInput}
-                        {...inputProps}
-                    />
-                    <span style={styles.optionLabel}>{option.label}</span>
-                </label>
-            ))}
-        </div>
-    );
-
-    // Render checkbox group
-    const renderCheckboxGroup = () => (
-        <div style={styles.checkboxGroup}>
-            {metadata.options.map((option) => (
-                <label key={option.value} style={styles.checkboxOption}>
-                    <input
-                        type="checkbox"
-                        name={metadata.name}
-                        value={option.value}
-                        checked={selectedValues.includes(option.value)}
-                        disabled={option.disabled || metadata.disabled}
-                        onChange={() => handleOptionSelect(option)}
-                        style={styles.checkboxInput}
-                        {...inputProps}
-                    />
-                    <span style={styles.optionLabel}>{option.label}</span>
-                </label>
-            ))}
-        </div>
-    );
-
-    // Render main input based on display type
-    const renderInput = () => {
-        switch (metadata.display) {
-            case 'radio':
-                return renderRadioGroup();
-            case 'checkbox':
-                return renderCheckboxGroup();
-            case 'dropdown':
-            default:
-                return renderDropdown();
+        if (multiple) {
+            const currentValues = Array.isArray(value) ? value : [];
+            const newValues = currentValues.includes(optionValue)
+                ? currentValues.filter((v) => v !== optionValue)
+                : [...currentValues, optionValue];
+            onChange?.(newValues.length > 0 ? newValues : null);
+        } else {
+            onChange?.(optionValue);
+            setIsOpen(false);
+            setSearchQuery('');
         }
     };
 
-    const containerStyle = {
-        ...styles.container,
-        ...(!currentState.isValid ? { borderColor: theme.colors.border.error } : {}),
+    // Filter options based on search query
+    const filteredOptions = searchQuery
+        ? options.filter((opt) => opt.label.toLowerCase().includes(searchQuery.toLowerCase()))
+        : options;
+
+    // Check if option is selected
+    const isSelected = (optionValue: string): boolean => {
+        if (Array.isArray(value)) {
+            return value.includes(optionValue);
+        }
+        return value === optionValue;
     };
 
+    // Readonly mode - just show the text
+    if (isReadonly) {
+        return <div className="text-sm text-gray-900">{displayText}</div>;
+    }
+
+    // Edit or Disabled mode - show dropdown
     return (
-        <div
-            style={containerStyle}
-            className={clsx(metadata.className)}
-            data-testid={metadata.testId}
-        >
-            {/* Label */}
-            {metadata.label && (
-                <label style={styles.label} htmlFor={metadata.name}>
-                    {metadata.label}
-                    {metadata.required && <span style={styles.requiredIndicator}>*</span>}
-                </label>
-            )}
+        <div ref={containerRef} className="relative">
+            {/* Dropdown Trigger Button */}
+            <button
+                type="button"
+                onClick={() => !isDisabled && setIsOpen(!isOpen)}
+                disabled={isDisabled}
+                className={`
+                    w-full px-3 py-2 text-left text-sm
+                    bg-white border rounded-lg shadow-sm
+                    flex items-center justify-between gap-2
+                    transition-colors duration-150
+                    ${
+                        isDisabled
+                            ? 'bg-gray-50 text-gray-500 cursor-not-allowed border-gray-200'
+                            : error
+                            ? 'border-red-300 focus:border-red-500 focus:ring-2 focus:ring-red-200'
+                            : 'border-gray-300 hover:border-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200'
+                    }
+                    ${required && !value ? 'border-red-300' : ''}
+                `}
+            >
+                <span
+                    className={`flex-1 truncate ${
+                        !value || (Array.isArray(value) && value.length === 0)
+                            ? 'text-gray-400'
+                            : 'text-gray-900'
+                    }`}
+                >
+                    {displayText}
+                </span>
+                <svg
+                    className={`w-4 h-4 transition-transform duration-200 ${
+                        isOpen ? 'rotate-180' : ''
+                    } ${isDisabled ? 'text-gray-400' : 'text-gray-500'}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                >
+                    <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19 9l-7 7-7-7"
+                    />
+                </svg>
+            </button>
 
-            {/* Input */}
-            {renderInput()}
-
-            {/* Error messages */}
-            {!currentState.isValid && currentState.errors.length > 0 && (
-                <div style={styles.errorContainer}>
-                    {currentState.errors.map((error, index) => (
-                        <span key={index} style={styles.errorText}>
-                            {error}
-                        </span>
-                    ))}
+            {/* Error Message */}
+            {error && (
+                <div className="mt-1 flex items-center gap-1 text-xs text-red-600">
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                        <path
+                            fillRule="evenodd"
+                            d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                            clipRule="evenodd"
+                        />
+                    </svg>
+                    {error}
                 </div>
             )}
 
-            {/* Help text */}
-            {metadata.help && <span style={styles.helpText}>{metadata.help}</span>}
+            {/* Dropdown Flyout Panel */}
+            {isOpen && !isDisabled && (
+                <div className="absolute z-50 w-full mt-2 bg-white border border-gray-200 rounded-lg shadow-xl">
+                    {/* Search Input */}
+                    {searchable && (
+                        <div className="p-2 border-b border-gray-200">
+                            <div className="relative">
+                                <svg
+                                    className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                                    />
+                                </svg>
+                                <input
+                                    ref={searchInputRef}
+                                    type="text"
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    placeholder="Search..."
+                                    className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                                />
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Options List */}
+                    <div className="max-h-60 overflow-y-auto">
+                        {filteredOptions.length === 0 ? (
+                            <div className="px-3 py-8 text-center text-sm text-gray-500">
+                                No options found
+                            </div>
+                        ) : (
+                            filteredOptions.map((option) => {
+                                const selected = isSelected(option.value);
+                                const optionDisabled = option.disabled;
+
+                                return (
+                                    <button
+                                        key={option.value}
+                                        type="button"
+                                        onClick={() =>
+                                            !optionDisabled && handleSelectOption(option.value)
+                                        }
+                                        disabled={optionDisabled}
+                                        className={`
+                                            w-full px-3 py-2 text-left text-sm
+                                            flex items-center gap-2
+                                            transition-colors duration-100
+                                            ${
+                                                optionDisabled
+                                                    ? 'text-gray-400 cursor-not-allowed'
+                                                    : selected
+                                                    ? 'bg-blue-50 text-blue-900'
+                                                    : 'text-gray-900 hover:bg-gray-50'
+                                            }
+                                        `}
+                                    >
+                                        {multiple ? (
+                                            // Checkbox for multi-select
+                                            <div
+                                                className={`
+                                                w-4 h-4 border rounded flex items-center justify-center flex-shrink-0
+                                                ${
+                                                    selected
+                                                        ? 'bg-blue-600 border-blue-600'
+                                                        : 'border-gray-300 bg-white'
+                                                }
+                                            `}
+                                            >
+                                                {selected && (
+                                                    <svg
+                                                        className="w-3 h-3 text-white"
+                                                        fill="currentColor"
+                                                        viewBox="0 0 20 20"
+                                                    >
+                                                        <path
+                                                            fillRule="evenodd"
+                                                            d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                                            clipRule="evenodd"
+                                                        />
+                                                    </svg>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            // Checkmark for single-select
+                                            <div className="w-4 h-4 flex items-center justify-center flex-shrink-0">
+                                                {selected && (
+                                                    <svg
+                                                        className="w-4 h-4 text-blue-600"
+                                                        fill="currentColor"
+                                                        viewBox="0 0 20 20"
+                                                    >
+                                                        <path
+                                                            fillRule="evenodd"
+                                                            d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                                            clipRule="evenodd"
+                                                        />
+                                                    </svg>
+                                                )}
+                                            </div>
+                                        )}
+                                        <span className="flex-1 truncate">{option.label}</span>
+                                    </button>
+                                );
+                            })
+                        )}
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

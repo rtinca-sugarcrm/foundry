@@ -1,101 +1,13 @@
 /**
- * Tailwind CSS v4 - Global Styles for Sugar UI Components
+ * Tailwind CSS v4 - Global Styles
  * 
  * This file contains only essential base styles and utilities.
- * All component styling is done via Tailwind classes and CSS-in-JS.
+ * All component styling is done via Tailwind classes.
  */
 
 @import 'tailwindcss';
 
-/* Custom theme configuration for Tailwind v4 */
-@theme {
-    /* Sugar CRM brand colors */
-    --color-sugar-primary-50: #f0f9ff;
-    --color-sugar-primary-100: #e0f2fe;
-    --color-sugar-primary-200: #bae6fd;
-    --color-sugar-primary-300: #7dd3fc;
-    --color-sugar-primary-400: #38bdf8;
-    --color-sugar-primary-500: #0ea5e9;
-    --color-sugar-primary-600: #0284c7;
-    --color-sugar-primary-700: #0369a1;
-    --color-sugar-primary-800: #075985;
-    --color-sugar-primary-900: #0c4a6e;
-
-    --color-sugar-gray-50: #f9fafb;
-    --color-sugar-gray-100: #f3f4f6;
-    --color-sugar-gray-200: #e5e7eb;
-    --color-sugar-gray-300: #d1d5db;
-    --color-sugar-gray-400: #9ca3af;
-    --color-sugar-gray-500: #6b7280;
-    --color-sugar-gray-600: #4b5563;
-    --color-sugar-gray-700: #374151;
-    --color-sugar-gray-800: #1f2937;
-    --color-sugar-gray-900: #111827;
-
-    --color-sugar-success-50: #f0fdf4;
-    --color-sugar-success-100: #dcfce7;
-    --color-sugar-success-200: #bbf7d0;
-    --color-sugar-success-300: #86efac;
-    --color-sugar-success-400: #4ade80;
-    --color-sugar-success-500: #22c55e;
-    --color-sugar-success-600: #16a34a;
-    --color-sugar-success-700: #15803d;
-    --color-sugar-success-800: #166534;
-    --color-sugar-success-900: #14532d;
-
-    --color-sugar-warning-50: #fffbeb;
-    --color-sugar-warning-100: #fef3c7;
-    --color-sugar-warning-200: #fde68a;
-    --color-sugar-warning-300: #fcd34d;
-    --color-sugar-warning-400: #fbbf24;
-    --color-sugar-warning-500: #f59e0b;
-    --color-sugar-warning-600: #d97706;
-    --color-sugar-warning-700: #b45309;
-    --color-sugar-warning-800: #92400e;
-    --color-sugar-warning-900: #78350f;
-
-    --color-sugar-error-50: #fef2f2;
-    --color-sugar-error-100: #fee2e2;
-    --color-sugar-error-200: #fecaca;
-    --color-sugar-error-300: #fca5a5;
-    --color-sugar-error-400: #f87171;
-    --color-sugar-error-500: #ef4444;
-    --color-sugar-error-600: #dc2626;
-    --color-sugar-error-700: #b91c1c;
-    --color-sugar-error-800: #991b1b;
-    --color-sugar-error-900: #7f1d1d;
-
-    /* Animation keyframes */
-    --animate-fade-in: fade-in 0.2s ease-in-out;
-    --animate-slide-down: slide-down 0.2s ease-out;
-}
-
-/* Keyframe definitions */
-@keyframes fade-in {
-    from {
-        opacity: 0;
-    }
-    to {
-        opacity: 1;
-    }
-}
-
-@keyframes slide-down {
-    from {
-        opacity: 0;
-        transform: translateY(-10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-/* Base layer - minimal global styles */
-@layer base {
-    *,
-    *::before,
-    *::after {
-        box-sizing: border-box;
-    }
+/* Base reset */
+* {
+    box-sizing: border-box;
 }
