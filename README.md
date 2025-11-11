@@ -55,10 +55,7 @@ Name field with linking and focus drawer support for Sugar CRM.
 
 ### 2. Use Field Adapters
 
-Copy adapters from `adapters/` folder to Sugar:
-- `enum-field-adapter.js` → `custom/clients/base/fields/enum/enum.js`
-- `text-field-adapter.js` → `custom/clients/base/fields/text/text.js`
-- `name-field-adapter.js` → `custom/clients/base/fields/name/name.js`
+Field adapters are available in the repo but not distributed publicly.
 
 Each adapter needs a template:
 

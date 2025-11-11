@@ -1,0 +1,23 @@
+# Exclude adapters from npm package
+adapters/
+
+# Exclude source files
+src/
+.storybook/
+
+# Exclude config files
+*.config.js
+*.config.ts
+tsconfig.json
+
+# Exclude tests
+**/*.test.ts
+**/*.test.tsx
+**/*.stories.ts
+**/*.stories.tsx
+
+# Exclude development files
+node_modules/
+.git/
+.vscode/
+*.log

@@ -8,8 +8,7 @@
   "types": "dist/index.d.ts",
   "style": "dist/ui-react-components.css",
   "files": [
-    "dist",
-    "adapters"
+    "dist"
   ],
   "scripts": {
     "build": "rollup -c",
