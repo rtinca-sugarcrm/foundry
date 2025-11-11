@@ -159,9 +159,7 @@ export const WithSelection = {
 
         return (
             <div className="space-y-4">
-                <div className="text-sm text-gray-600">
-                    Selected: {selectedIds.length} row(s)
-                </div>
+                <div className="text-sm text-gray-600">Selected: {selectedIds.length} row(s)</div>
                 <ListView
                     columns={sampleColumns}
                     rows={sampleRows}

@@ -8,9 +8,4 @@ export { ListView } from './atoms/ListView';
 export type { EnumFieldProps, EnumOption } from './atoms/EnumField';
 export type { TextFieldProps } from './atoms/TextField';
 export type { NameFieldProps } from './atoms/NameField';
-export type {
-    ListViewProps,
-    ListViewColumn,
-    ListViewRow,
-    ListViewSort,
-} from './atoms/ListView';
+export type { ListViewProps, ListViewColumn, ListViewRow, ListViewSort } from './atoms/ListView';

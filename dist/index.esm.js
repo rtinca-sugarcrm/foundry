@@ -383,7 +383,13 @@ const ListView = ({ columns, rows, selectable = false, multiSelect = true, selec
             case 'phone':
             case 'url':
             case 'text':
-                return (jsx(TextField, { value: value, mode: "readonly", type: column.type === 'email' ? 'email' : column.type === 'phone' ? 'tel' : column.type === 'url' ? 'url' : 'text', ...(column.fieldProps || {}) }));
+                return (jsx(TextField, { value: value, mode: "readonly", type: column.type === 'email'
+                        ? 'email'
+                        : column.type === 'phone'
+                            ? 'tel'
+                            : column.type === 'url'
+                                ? 'url'
+                                : 'text', ...(column.fieldProps || {}) }));
             case 'custom':
                 // Custom type but no render function provided
                 return jsx("div", { className: "text-sm text-gray-900", children: String(value) });
@@ -406,7 +412,13 @@ const ListView = ({ columns, rows, selectable = false, multiSelect = true, selec
     if (rows.length === 0) {
         return (jsx("div", { className: "w-full p-8 text-center", children: jsx("div", { className: "text-gray-500", children: emptyMessage }) }));
     }
-    return (jsx("div", { ref: tableRef, className: `w-full overflow-auto ${className}`, style: { maxHeight: maxHeight ? (typeof maxHeight === 'number' ? `${maxHeight}px` : maxHeight) : undefined }, children: jsxs("table", { className: "w-full border-collapse", children: [showHeader && (jsx("thead", { className: "bg-gray-50 sticky top-0 z-10", children: jsxs("tr", { className: "border-b border-gray-200", children: [selectable && (jsx("th", { className: "w-12 px-4 py-3 text-left", children: multiSelect && (jsx("input", { type: "checkbox", checked: allSelected, ref: (input) => {
+    return (jsx("div", { ref: tableRef, className: `w-full overflow-auto ${className}`, style: {
+            maxHeight: maxHeight
+                ? typeof maxHeight === 'number'
+                    ? `${maxHeight}px`
+                    : maxHeight
+                : undefined,
+        }, children: jsxs("table", { className: "w-full border-collapse", children: [showHeader && (jsx("thead", { className: "bg-gray-50 sticky top-0 z-10", children: jsxs("tr", { className: "border-b border-gray-200", children: [selectable && (jsx("th", { className: "w-12 px-4 py-3 text-left", children: multiSelect && (jsx("input", { type: "checkbox", checked: allSelected, ref: (input) => {
                                         if (input) {
                                             input.indeterminate = someSelected;
                                         }

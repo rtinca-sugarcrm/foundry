@@ -152,9 +152,7 @@ export const ListView: React.FC<ListViewProps> = ({
         if (multiSelect && event?.shiftKey) {
             // Shift-click: select range
             const currentIndex = rows.findIndex((r) => r.id === rowId);
-            const lastSelectedIndex = rows.findIndex((r) =>
-                internalSelectedIds.includes(r.id)
-            );
+            const lastSelectedIndex = rows.findIndex((r) => internalSelectedIds.includes(r.id));
 
             if (lastSelectedIndex >= 0) {
                 const start = Math.min(currentIndex, lastSelectedIndex);
@@ -281,7 +279,15 @@ export const ListView: React.FC<ListViewProps> = ({
                     <TextField
                         value={value}
                         mode="readonly"
-                        type={column.type === 'email' ? 'email' : column.type === 'phone' ? 'tel' : column.type === 'url' ? 'url' : 'text'}
+                        type={
+                            column.type === 'email'
+                                ? 'email'
+                                : column.type === 'phone'
+                                ? 'tel'
+                                : column.type === 'url'
+                                ? 'url'
+                                : 'text'
+                        }
                         {...(column.fieldProps || {})}
                     />
                 );
@@ -313,13 +319,7 @@ export const ListView: React.FC<ListViewProps> = ({
                         viewBox="0 0 24 24"
                         stroke="currentColor"
                     >
-                        <circle
-                            className="opacity-25"
-                            cx="12"
-                            cy="12"
-                            r="10"
-                            strokeWidth="4"
-                        />
+                        <circle className="opacity-25" cx="12" cy="12" r="10" strokeWidth="4" />
                         <path
                             className="opacity-75"
                             fill="currentColor"
@@ -345,7 +345,13 @@ export const ListView: React.FC<ListViewProps> = ({
         <div
             ref={tableRef}
             className={`w-full overflow-auto ${className}`}
-            style={{ maxHeight: maxHeight ? (typeof maxHeight === 'number' ? `${maxHeight}px` : maxHeight) : undefined }}
+            style={{
+                maxHeight: maxHeight
+                    ? typeof maxHeight === 'number'
+                        ? `${maxHeight}px`
+                        : maxHeight
+                    : undefined,
+            }}
         >
             <table className="w-full border-collapse">
                 {showHeader && (
@@ -462,9 +468,7 @@ export const ListView: React.FC<ListViewProps> = ({
                                             type="checkbox"
                                             checked={isSelected}
                                             disabled={row.disabled}
-                                            onChange={(e) =>
-                                                handleRowSelect(row.id, e as any)
-                                            }
+                                            onChange={(e) => handleRowSelect(row.id, e as any)}
                                             className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                                         />
                                     </td>
