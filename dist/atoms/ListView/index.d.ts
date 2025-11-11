@@ -1,3 +1,4 @@
 export { ListView } from './ListView';
-export type { ListViewColumn, ListViewRow, ListViewSort, ListViewProps } from './ListView';
+export { ListViewRow } from './ListViewRow';
+export type { ListViewColumn, ListViewRow as ListViewRowType, ListViewSort, ListViewProps, } from './ListView';
 //# sourceMappingURL=index.d.ts.map

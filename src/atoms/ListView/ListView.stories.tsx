@@ -363,3 +363,49 @@ export const DifferentFieldTypes: Story = {
         ],
     },
 };
+
+export const WithBuiltInActions: Story = {
+    args: {
+        columns: [
+            { key: 'name', label: 'Name', width: 200, type: 'name' },
+            { key: 'email', label: 'Email', width: 200, type: 'email' },
+            {
+                key: 'role',
+                label: 'Role',
+                width: 150,
+                type: 'enum',
+                options: [
+                    { value: 'admin', label: 'Admin' },
+                    { value: 'user', label: 'User' },
+                    { value: 'editor', label: 'Editor' },
+                ],
+            },
+        ],
+        rows: sampleRows.slice(0, 3),
+        showEdit: true,
+        showDelete: true,
+        customActions: [
+            { label: 'View Details', action: 'view' },
+            { label: 'Duplicate', action: 'duplicate' },
+        ],
+        onRowAction: (action, row, rowIndex) => {
+            console.log(`Action: ${action}`, { row, rowIndex });
+
+            if (action === 'edit') {
+                alert(`Entering edit mode for: ${row.data.name}`);
+            } else if (action === 'save') {
+                alert(
+                    `Saving changes for: ${row.data.name}\n\nUpdated data:\n${JSON.stringify(
+                        row.data,
+                        null,
+                        2
+                    )}`
+                );
+            } else if (action === 'delete') {
+                alert(`Delete action for: ${row.data.name}`);
+            } else {
+                alert(`Custom action "${action}" on: ${row.data.name}`);
+            }
+        },
+    },
+};

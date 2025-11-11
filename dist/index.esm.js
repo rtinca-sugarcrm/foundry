@@ -253,15 +253,102 @@ const NameField = ({ value, mode = 'edit', required = false, placeholder = 'Ente
     return (jsx("div", { className: "relative", children: jsx("input", { type: "text", value: "", disabled: true, placeholder: placeholder, className: "w-full px-3 py-2 text-sm bg-gray-50 text-gray-500 cursor-not-allowed border border-gray-200 rounded-lg shadow-sm focus:outline-none" }) }));
 };
 
-const ListView = ({ columns, rows, selectable = false, multiSelect = true, selectedIds = [], sort, loading = false, emptyMessage = 'No data available', hoverable = true, clickableRows = false, className = '', showHeader = true, maxHeight, onSelectionChange, onRowClick, onRowDoubleClick, onSortChange, onColumnHeaderClick, onRowAction, }) => {
+const ListViewRow = ({ row, rowIndex, columns, selectable, isSelected, isEditing, editingRowData, hoverable, clickableRows, hasRowActions, showEdit, showDelete, customActions, openDropdownId, onSelect, onClick, onDoubleClick, onFieldChange, onSave, onCancel, onToggleDropdown, onActionClick, onRowAction, }) => {
+    const isClickable = clickableRows && !row.disabled;
+    const visibleColumns = columns.filter((col) => col.visible !== false);
+    // Render cell content
+    const renderCell = (column) => {
+        const value = isEditing ? editingRowData[column.key] : row.data[column.key];
+        const mode = isEditing ? 'edit' : 'readonly';
+        // Use custom render if provided
+        if (column.render) {
+            return column.render(value, row.data, rowIndex);
+        }
+        // Handle null/undefined values
+        if (value === null || value === undefined) {
+            if (isEditing) ;
+            else {
+                return jsx("span", { className: "text-gray-400", children: "-" });
+            }
+        }
+        // Render based on field type using our components
+        switch (column.type) {
+            case 'enum':
+                return (jsx(EnumField, { value: value, options: column.options || [], mode: mode, onChange: isEditing ? (newVal) => onFieldChange(column.key, newVal) : undefined, ...(column.fieldProps || {}) }));
+            case 'name':
+            case 'relate':
+                return (jsx(NameField, { value: value, mode: mode, link: !isEditing && (column.type === 'name' || column.type === 'relate'), recordId: row.data[`${column.key}_id`], module: row.data[`${column.key}_module`], onChange: isEditing ? (newVal) => onFieldChange(column.key, newVal) : undefined, onLinkClick: !isEditing
+                        ? column.fieldProps?.onLinkClick ||
+                            ((recordId, module) => {
+                                onRowAction?.('navigate', row, rowIndex);
+                            })
+                        : undefined, ...(column.fieldProps || {}) }));
+            case 'email':
+            case 'phone':
+            case 'url':
+            case 'text':
+                return (jsx(TextField, { value: value, mode: mode, type: column.type === 'email'
+                        ? 'email'
+                        : column.type === 'phone'
+                            ? 'tel'
+                            : column.type === 'url'
+                                ? 'url'
+                                : 'text', onChange: isEditing ? (newVal) => onFieldChange(column.key, newVal) : undefined, ...(column.fieldProps || {}) }));
+            case 'custom':
+                // Custom type but no render function provided
+                return jsx("div", { className: "text-sm text-gray-900", children: String(value) });
+            default:
+                // Default: plain text rendering
+                return jsx("div", { className: "text-sm text-gray-900", children: String(value) });
+        }
+    };
+    return (jsxs("tr", { className: `
+                ${hoverable && !row.disabled ? 'hover:bg-gray-50' : ''}
+                ${isSelected ? 'bg-blue-50' : ''}
+                ${isClickable ? 'cursor-pointer' : ''}
+                ${row.disabled ? 'opacity-50 cursor-not-allowed' : ''}
+                ${row.className || ''}
+            `, onClick: (e) => onClick(row, rowIndex, e), onDoubleClick: () => onDoubleClick(row, rowIndex), children: [selectable && (jsx("td", { className: "w-12 px-4 py-3", children: jsx("input", { type: "checkbox", checked: isSelected, disabled: row.disabled, onChange: (e) => onSelect(row.id, e), className: "w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed" }) })), visibleColumns.map((column) => (jsx("td", { className: `px-4 py-3 text-sm text-gray-900 ${column.align === 'center'
+                    ? 'text-center'
+                    : column.align === 'right'
+                        ? 'text-right'
+                        : 'text-left'}`, children: renderCell(column) }, column.key))), hasRowActions && (jsx("td", { className: "w-16 px-4 py-3 text-right", children: isEditing ? (
+                // Edit mode: Show Save and Cancel buttons
+                jsxs("div", { className: "flex gap-2 justify-end", children: [jsx("button", { onClick: (e) => {
+                                e.stopPropagation();
+                                onCancel();
+                            }, className: "px-3 py-1 text-sm text-gray-600 hover:text-gray-800 border border-gray-300 rounded hover:bg-gray-50", children: "Cancel" }), jsx("button", { onClick: (e) => {
+                                e.stopPropagation();
+                                onSave(row, rowIndex);
+                            }, className: "px-3 py-1 text-sm text-white bg-blue-600 hover:bg-blue-700 rounded", children: "Save" })] })) : (
+                // Normal mode: Show actions dropdown
+                jsxs("div", { className: "relative actions-dropdown", children: [jsx("button", { onClick: (e) => onToggleDropdown(row.id, e), disabled: row.disabled, className: "p-1 text-gray-400 hover:text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed", children: jsx("svg", { className: "w-5 h-5", fill: "currentColor", viewBox: "0 0 20 20", children: jsx("path", { d: "M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" }) }) }), openDropdownId === row.id && (jsx("div", { className: "absolute right-0 z-20 mt-2 w-48 bg-white rounded-md shadow-lg border border-gray-200", children: jsxs("div", { className: "py-1", children: [showEdit && (jsx("button", { onClick: () => onActionClick('edit', row, rowIndex), className: "w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100", children: "Edit" })), showDelete && (jsx("button", { onClick: () => onActionClick('delete', row, rowIndex), className: "w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50", children: "Delete" })), customActions.map((customAction, idx) => (jsx("button", { onClick: () => onActionClick(customAction.action, row, rowIndex), className: "w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100", children: customAction.label }, idx)))] }) }))] })) }))] }));
+};
+
+const ListView = ({ columns, rows, selectable = false, multiSelect = true, selectedIds = [], sort, loading = false, emptyMessage = 'No data available', hoverable = true, clickableRows = false, className = '', showHeader = true, maxHeight, showEdit = false, showDelete = false, customActions = [], onSelectionChange, onRowClick, onRowDoubleClick, onSortChange, onColumnHeaderClick, onRowAction, }) => {
     const [internalSelectedIds, setInternalSelectedIds] = useState(selectedIds);
+    const [openDropdownId, setOpenDropdownId] = useState(null);
+    const [editingRowId, setEditingRowId] = useState(null);
+    const [editingRowData, setEditingRowData] = useState({});
     const tableRef = useRef(null);
     // Sync internal state with external selectedIds prop
     useEffect(() => {
         setInternalSelectedIds(selectedIds);
     }, [selectedIds]);
+    // Close dropdown when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (openDropdownId && !event.target.closest('.actions-dropdown')) {
+                setOpenDropdownId(null);
+            }
+        };
+        document.addEventListener('click', handleClickOutside);
+        return () => document.removeEventListener('click', handleClickOutside);
+    }, [openDropdownId]);
     // Get visible columns
     const visibleColumns = columns.filter((col) => col.visible !== false);
+    // Check if row actions should be shown
+    const hasRowActions = showEdit || showDelete || customActions.length > 0;
     // Check if all rows are selected
     const allSelected = rows.length > 0 &&
         rows.every((row) => row.disabled || internalSelectedIds.includes(row.id));
@@ -358,45 +445,42 @@ const ListView = ({ columns, rows, selectable = false, multiSelect = true, selec
             return;
         onRowDoubleClick?.(row, rowIndex);
     };
-    // Render cell content
-    const renderCell = (column, row, rowIndex) => {
-        const value = row.data[column.key];
-        // Use custom render if provided
-        if (column.render) {
-            return column.render(value, row.data, rowIndex);
+    // Handle action click
+    const handleActionClick = (action, row, rowIndex) => {
+        setOpenDropdownId(null);
+        if (action === 'edit') {
+            // Enter edit mode
+            setEditingRowId(row.id);
+            setEditingRowData({ ...row.data });
+            // Notify parent component
+            onRowAction?.('edit', row, rowIndex);
         }
-        // Handle null/undefined values
-        if (value === null || value === undefined) {
-            return jsx("span", { className: "text-gray-400", children: "-" });
+        else {
+            onRowAction?.(action, row, rowIndex);
         }
-        // Render based on field type using our components
-        switch (column.type) {
-            case 'enum':
-                return (jsx(EnumField, { value: value, options: column.options || [], mode: "readonly", ...(column.fieldProps || {}) }));
-            case 'name':
-            case 'relate':
-                return (jsx(NameField, { value: value, mode: "readonly", link: column.type === 'name' || column.type === 'relate', recordId: row.data[`${column.key}_id`], module: row.data[`${column.key}_module`], onLinkClick: column.fieldProps?.onLinkClick ||
-                        ((recordId, module) => {
-                            onRowAction?.('navigate', row, rowIndex);
-                        }), ...(column.fieldProps || {}) }));
-            case 'email':
-            case 'phone':
-            case 'url':
-            case 'text':
-                return (jsx(TextField, { value: value, mode: "readonly", type: column.type === 'email'
-                        ? 'email'
-                        : column.type === 'phone'
-                            ? 'tel'
-                            : column.type === 'url'
-                                ? 'url'
-                                : 'text', ...(column.fieldProps || {}) }));
-            case 'custom':
-                // Custom type but no render function provided
-                return jsx("div", { className: "text-sm text-gray-900", children: String(value) });
-            default:
-                // Default: plain text rendering
-                return jsx("div", { className: "text-sm text-gray-900", children: String(value) });
-        }
+    };
+    // Handle save
+    const handleSave = (row, rowIndex) => {
+        onRowAction?.('save', { ...row, data: editingRowData }, rowIndex);
+        setEditingRowId(null);
+        setEditingRowData({});
+    };
+    // Handle cancel
+    const handleCancel = () => {
+        setEditingRowId(null);
+        setEditingRowData({});
+    };
+    // Handle field change in edit mode
+    const handleFieldChange = (columnKey, newValue) => {
+        setEditingRowData((prev) => ({
+            ...prev,
+            [columnKey]: newValue,
+        }));
+    };
+    // Toggle dropdown
+    const toggleDropdown = (rowId, event) => {
+        event.stopPropagation();
+        setOpenDropdownId(openDropdownId === rowId ? null : rowId);
     };
     // Get column width style
     const getColumnWidth = (column) => {
@@ -431,21 +515,7 @@ const ListView = ({ columns, rows, selectable = false, multiSelect = true, selec
                                         handleSort(column.key);
                                     }
                                     onColumnHeaderClick?.(column);
-                                }, children: jsxs("div", { className: "flex items-center gap-2", children: [jsx("span", { children: column.label }), column.sortable && (jsx("span", { className: "text-gray-400", children: sort?.columnKey === column.key ? (sort.direction === 'asc' ? (jsx("svg", { className: "w-4 h-4", fill: "currentColor", viewBox: "0 0 20 20", children: jsx("path", { fillRule: "evenodd", d: "M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z", clipRule: "evenodd" }) })) : (jsx("svg", { className: "w-4 h-4", fill: "currentColor", viewBox: "0 0 20 20", children: jsx("path", { fillRule: "evenodd", d: "M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z", clipRule: "evenodd" }) }))) : (jsx("svg", { className: "w-4 h-4 opacity-0 group-hover:opacity-100", fill: "currentColor", viewBox: "0 0 20 20", children: jsx("path", { d: "M5 12a1 1 0 102 0V6.414l1.293 1.293a1 1 0 001.414-1.414l-3-3a1 1 0 00-1.414 0l-3 3a1 1 0 001.414 1.414L5 6.414V12zM15 8a1 1 0 10-2 0v5.586l-1.293-1.293a1 1 0 00-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L15 13.586V8z" }) })) }))] }) }, column.key)))] }) })), jsx("tbody", { className: "bg-white divide-y divide-gray-200", children: rows.map((row, rowIndex) => {
-                        const isSelected = internalSelectedIds.includes(row.id);
-                        const isClickable = clickableRows && !row.disabled;
-                        return (jsxs("tr", { className: `
-                                    ${hoverable && !row.disabled ? 'hover:bg-gray-50' : ''}
-                                    ${isSelected ? 'bg-blue-50' : ''}
-                                    ${isClickable ? 'cursor-pointer' : ''}
-                                    ${row.disabled ? 'opacity-50 cursor-not-allowed' : ''}
-                                    ${row.className || ''}
-                                `, onClick: (e) => handleRowClick(row, rowIndex, e), onDoubleClick: () => handleRowDoubleClick(row, rowIndex), children: [selectable && (jsx("td", { className: "w-12 px-4 py-3", children: jsx("input", { type: "checkbox", checked: isSelected, disabled: row.disabled, onChange: (e) => handleRowSelect(row.id, e), className: "w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed" }) })), visibleColumns.map((column) => (jsx("td", { className: `px-4 py-3 text-sm text-gray-900 ${column.align === 'center'
-                                        ? 'text-center'
-                                        : column.align === 'right'
-                                            ? 'text-right'
-                                            : 'text-left'}`, children: renderCell(column, row, rowIndex) }, column.key)))] }, row.id));
-                    }) })] }) }));
+                                }, children: jsxs("div", { className: "flex items-center gap-2", children: [jsx("span", { children: column.label }), column.sortable && (jsx("span", { className: "text-gray-400", children: sort?.columnKey === column.key ? (sort.direction === 'asc' ? (jsx("svg", { className: "w-4 h-4", fill: "currentColor", viewBox: "0 0 20 20", children: jsx("path", { fillRule: "evenodd", d: "M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z", clipRule: "evenodd" }) })) : (jsx("svg", { className: "w-4 h-4", fill: "currentColor", viewBox: "0 0 20 20", children: jsx("path", { fillRule: "evenodd", d: "M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z", clipRule: "evenodd" }) }))) : (jsx("svg", { className: "w-4 h-4 opacity-0 group-hover:opacity-100", fill: "currentColor", viewBox: "0 0 20 20", children: jsx("path", { d: "M5 12a1 1 0 102 0V6.414l1.293 1.293a1 1 0 001.414-1.414l-3-3a1 1 0 00-1.414 0l-3 3a1 1 0 001.414 1.414L5 6.414V12zM15 8a1 1 0 10-2 0v5.586l-1.293-1.293a1 1 0 00-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L15 13.586V8z" }) })) }))] }) }, column.key))), hasRowActions && (jsx("th", { className: "w-16 px-4 py-3 text-right", children: jsx("span", { className: "text-sm font-semibold text-gray-700", children: "Actions" }) }))] }) })), jsx("tbody", { className: "bg-white divide-y divide-gray-200", children: rows.map((row, rowIndex) => (jsx(ListViewRow, { row: row, rowIndex: rowIndex, columns: visibleColumns, selectable: selectable, isSelected: internalSelectedIds.includes(row.id), isEditing: editingRowId === row.id, editingRowData: editingRowData, hoverable: hoverable, clickableRows: clickableRows, hasRowActions: hasRowActions, showEdit: showEdit, showDelete: showDelete, customActions: customActions, openDropdownId: openDropdownId, onSelect: handleRowSelect, onClick: handleRowClick, onDoubleClick: handleRowDoubleClick, onFieldChange: handleFieldChange, onSave: handleSave, onCancel: handleCancel, onToggleDropdown: toggleDropdown, onActionClick: handleActionClick, onRowAction: onRowAction }, row.id))) })] }) }));
 };
 
 export { EnumField, ListView, NameField, TextField };

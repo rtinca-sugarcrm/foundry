@@ -18,6 +18,12 @@
     plugins: ['ExternalReactBase'],
 
     initialize: function(options) {
+        // Follow the same pattern as list/flex-list views to properly fetch metadata
+        // Grab the list of fields to display from the main list view metadata
+        var listViewMeta = app.metadata.getView(options.module, 'list') || {};
+        // Extend from an empty object to prevent pollution of the base metadata
+        options.meta = _.extend({}, listViewMeta, options.meta || {});
+        
         this._super('initialize', [options]);
         
         // Listen to collection events
@@ -46,6 +52,11 @@
             clickableRows: this.options.clickableRows !== false,
             showHeader: this.options.showHeader !== false,
             maxHeight: this.options.maxHeight,
+            // Row actions
+            showEdit: this.options.showEdit !== false,
+            showDelete: this.options.showDelete !== false,
+            customActions: this.options.customActions || [],
+            // Callbacks
             onSelectionChange: this._onSelectionChange.bind(this),
             onRowClick: this._onRowClick.bind(this),
             onRowDoubleClick: this._onRowDoubleClick.bind(this),
@@ -59,11 +70,23 @@
      * Transform Sugar metadata into ListView columns
      */
     _getColumns: function() {
-        const panels = this.options.metadata?.panels || [];
+        // Follow the same pattern as list/flex-list/recordlist views
+        // Metadata is stored in this.meta.panels after being fetched and processed
+        const panels = this.meta?.panels || [];
         const fields = panels[0]?.fields || [];
         
+        // Safety check: ensure module is available
+        if (!this.module) {
+            app.logger.error('react-list: module is not defined');
+            return [];
+        }
+        
         return fields.map(fieldMeta => {
-            const fieldDef = app.metadata.getField(this.module, fieldMeta.name) || {};
+            // app.metadata.getField expects an options object with module and name properties
+            const fieldDef = app.metadata.getField({
+                module: this.module,
+                name: fieldMeta.name
+            }) || {};
             const fieldType = fieldDef.type || 'varchar';
             
             return {
@@ -297,8 +320,98 @@
     _onRowAction: function(action, row, rowIndex) {
         const model = this.collection && this.collection.get(row.id);
         
-        if (this.options.onRowAction) {
-            this.options.onRowAction.call(this, action, row, rowIndex, model);
+        // Handle built-in actions
+        if (action === 'edit') {
+            // Check if user has access to edit
+            if (model && this._hasAccess(model, 'edit')) {
+                // Trigger context event for edit mode entered
+                if (this.context) {
+                    this.context.trigger('list:edit:fire', model);
+                }
+            } else {
+                app.alert.show('no-access', {
+                    level: 'error',
+                    messages: app.lang.get('LBL_NO_ACCESS', this.module)
+                });
+            }
+        } else if (action === 'save') {
+            // Save edited row data
+            if (model && this._hasAccess(model, 'edit')) {
+                // Update model with edited data
+                model.set(row.data);
+                
+                // Save to server
+                model.save(null, {
+                    success: () => {
+                        app.alert.show('save-success', {
+                            level: 'success',
+                            messages: app.lang.get('LBL_RECORD_SAVED', this.module),
+                            autoClose: true
+                        });
+                        
+                        // Trigger context event
+                        if (this.context) {
+                            this.context.trigger('list:save:success', model);
+                        }
+                    },
+                    error: (error) => {
+                        app.alert.show('save-error', {
+                            level: 'error',
+                            messages: app.lang.get('ERR_GENERIC_SERVER_ERROR')
+                        });
+                        
+                        // Trigger context event
+                        if (this.context) {
+                            this.context.trigger('list:save:error', model, error);
+                        }
+                    }
+                });
+            } else {
+                app.alert.show('no-access', {
+                    level: 'error',
+                    messages: app.lang.get('LBL_NO_ACCESS', this.module)
+                });
+            }
+        } else if (action === 'delete') {
+            // Show confirmation dialog before delete
+            if (model && this._hasAccess(model, 'delete')) {
+                app.alert.show('delete-confirmation', {
+                    level: 'confirmation',
+                    messages: app.lang.get('NTC_DELETE_CONFIRMATION'),
+                    onConfirm: () => {
+                        model.destroy({
+                            success: () => {
+                                app.alert.show('delete-success', {
+                                    level: 'success',
+                                    messages: app.lang.get('LBL_RECORD_DELETED', this.module),
+                                    autoClose: true
+                                });
+                                
+                                // Trigger context event
+                                if (this.context) {
+                                    this.context.trigger('list:delete:success', model);
+                                }
+                            },
+                            error: () => {
+                                app.alert.show('delete-error', {
+                                    level: 'error',
+                                    messages: app.lang.get('ERR_GENERIC_SERVER_ERROR')
+                                });
+                            }
+                        });
+                    }
+                });
+            } else {
+                app.alert.show('no-access', {
+                    level: 'error',
+                    messages: app.lang.get('LBL_NO_ACCESS', this.module)
+                });
+            }
+        } else {
+            // Handle custom actions
+            if (this.options.onRowAction) {
+                this.options.onRowAction.call(this, action, row, rowIndex, model);
+            }
         }
     },
 

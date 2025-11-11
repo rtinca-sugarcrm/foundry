@@ -67,6 +67,15 @@ export interface ListViewProps {
     showHeader?: boolean;
     /** Whether to make the table scrollable */
     maxHeight?: string | number;
+    /** Show edit action in row actions dropdown */
+    showEdit?: boolean;
+    /** Show delete action in row actions dropdown */
+    showDelete?: boolean;
+    /** Custom row actions to add to dropdown */
+    customActions?: Array<{
+        label: string;
+        action: string;
+    }>;
     /** Callback when selection changes */
     onSelectionChange?: (selectedIds: string[]) => void;
     /** Callback when a row is clicked */

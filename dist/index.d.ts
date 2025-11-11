@@ -86,7 +86,7 @@ interface ListViewColumn {
     /** Whether the column is visible */
     visible?: boolean;
 }
-interface ListViewRow {
+interface ListViewRow$1 {
     /** Unique identifier for the row */
     id: string;
     /** Data object containing all field values */
@@ -108,7 +108,7 @@ interface ListViewProps {
     /** Column definitions */
     columns: ListViewColumn[];
     /** Row data */
-    rows: ListViewRow[];
+    rows: ListViewRow$1[];
     /** Whether to show selection checkboxes */
     selectable?: boolean;
     /** Whether to allow multiple selections */
@@ -131,20 +131,59 @@ interface ListViewProps {
     showHeader?: boolean;
     /** Whether to make the table scrollable */
     maxHeight?: string | number;
+    /** Show edit action in row actions dropdown */
+    showEdit?: boolean;
+    /** Show delete action in row actions dropdown */
+    showDelete?: boolean;
+    /** Custom row actions to add to dropdown */
+    customActions?: Array<{
+        label: string;
+        action: string;
+    }>;
     /** Callback when selection changes */
     onSelectionChange?: (selectedIds: string[]) => void;
     /** Callback when a row is clicked */
-    onRowClick?: (row: ListViewRow, rowIndex: number) => void;
+    onRowClick?: (row: ListViewRow$1, rowIndex: number) => void;
     /** Callback when a row is double-clicked */
-    onRowDoubleClick?: (row: ListViewRow, rowIndex: number) => void;
+    onRowDoubleClick?: (row: ListViewRow$1, rowIndex: number) => void;
     /** Callback when sort changes */
     onSortChange?: (sort: ListViewSort) => void;
     /** Callback when a column header is clicked */
     onColumnHeaderClick?: (column: ListViewColumn) => void;
     /** Callback for custom row actions */
-    onRowAction?: (action: string, row: ListViewRow, rowIndex: number) => void;
+    onRowAction?: (action: string, row: ListViewRow$1, rowIndex: number) => void;
 }
 declare const ListView: React.FC<ListViewProps>;
 
-export { EnumField, ListView, NameField, TextField };
-export type { EnumFieldProps, EnumOption, ListViewColumn, ListViewProps, ListViewRow, ListViewSort, NameFieldProps, TextFieldProps };
+interface ListViewRowProps {
+    row: ListViewRow$1;
+    rowIndex: number;
+    columns: ListViewColumn[];
+    selectable: boolean;
+    isSelected: boolean;
+    isEditing: boolean;
+    editingRowData: Record<string, any>;
+    hoverable: boolean;
+    clickableRows: boolean;
+    hasRowActions: boolean;
+    showEdit: boolean;
+    showDelete: boolean;
+    customActions: Array<{
+        label: string;
+        action: string;
+    }>;
+    openDropdownId: string | null;
+    onSelect: (rowId: string, event?: React.MouseEvent) => void;
+    onClick: (row: ListViewRow$1, rowIndex: number, event: React.MouseEvent) => void;
+    onDoubleClick: (row: ListViewRow$1, rowIndex: number) => void;
+    onFieldChange: (columnKey: string, newValue: any) => void;
+    onSave: (row: ListViewRow$1, rowIndex: number) => void;
+    onCancel: () => void;
+    onToggleDropdown: (rowId: string, event: React.MouseEvent) => void;
+    onActionClick: (action: string, row: ListViewRow$1, rowIndex: number) => void;
+    onRowAction?: (action: string, row: ListViewRow$1, rowIndex: number) => void;
+}
+declare const ListViewRow: React.FC<ListViewRowProps>;
+
+export { EnumField, ListView, ListViewRow, NameField, TextField };
+export type { EnumFieldProps, EnumOption, ListViewColumn, ListViewProps, ListViewSort, NameFieldProps, TextFieldProps };

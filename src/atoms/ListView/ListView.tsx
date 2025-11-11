@@ -1,7 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { EnumField } from '../EnumField';
-import { TextField } from '../TextField';
-import { NameField } from '../NameField';
+import { ListViewRow } from './ListViewRow';
 import type { EnumOption } from '../EnumField';
 
 export interface ListViewColumn {
@@ -74,6 +72,12 @@ export interface ListViewProps {
     showHeader?: boolean;
     /** Whether to make the table scrollable */
     maxHeight?: string | number;
+    /** Show edit action in row actions dropdown */
+    showEdit?: boolean;
+    /** Show delete action in row actions dropdown */
+    showDelete?: boolean;
+    /** Custom row actions to add to dropdown */
+    customActions?: Array<{ label: string; action: string }>;
     /** Callback when selection changes */
     onSelectionChange?: (selectedIds: string[]) => void;
     /** Callback when a row is clicked */
@@ -102,6 +106,9 @@ export const ListView: React.FC<ListViewProps> = ({
     className = '',
     showHeader = true,
     maxHeight,
+    showEdit = false,
+    showDelete = false,
+    customActions = [],
     onSelectionChange,
     onRowClick,
     onRowDoubleClick,
@@ -110,6 +117,9 @@ export const ListView: React.FC<ListViewProps> = ({
     onRowAction,
 }) => {
     const [internalSelectedIds, setInternalSelectedIds] = useState<string[]>(selectedIds);
+    const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
+    const [editingRowId, setEditingRowId] = useState<string | null>(null);
+    const [editingRowData, setEditingRowData] = useState<Record<string, any>>({});
     const tableRef = useRef<HTMLDivElement>(null);
 
     // Sync internal state with external selectedIds prop
@@ -117,8 +127,22 @@ export const ListView: React.FC<ListViewProps> = ({
         setInternalSelectedIds(selectedIds);
     }, [selectedIds]);
 
+    // Close dropdown when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (openDropdownId && !(event.target as Element).closest('.actions-dropdown')) {
+                setOpenDropdownId(null);
+            }
+        };
+        document.addEventListener('click', handleClickOutside);
+        return () => document.removeEventListener('click', handleClickOutside);
+    }, [openDropdownId]);
+
     // Get visible columns
     const visibleColumns = columns.filter((col) => col.visible !== false);
+
+    // Check if row actions should be shown
+    const hasRowActions = showEdit || showDelete || customActions.length > 0;
 
     // Check if all rows are selected
     const allSelected =
@@ -226,80 +250,46 @@ export const ListView: React.FC<ListViewProps> = ({
         onRowDoubleClick?.(row, rowIndex);
     };
 
-    // Render cell content
-    const renderCell = (column: ListViewColumn, row: ListViewRow, rowIndex: number) => {
-        const value = row.data[column.key];
+    // Handle action click
+    const handleActionClick = (action: string, row: ListViewRow, rowIndex: number) => {
+        setOpenDropdownId(null);
 
-        // Use custom render if provided
-        if (column.render) {
-            return column.render(value, row.data, rowIndex);
+        if (action === 'edit') {
+            // Enter edit mode
+            setEditingRowId(row.id);
+            setEditingRowData({ ...row.data });
+            // Notify parent component
+            onRowAction?.('edit', row, rowIndex);
+        } else {
+            onRowAction?.(action, row, rowIndex);
         }
+    };
 
-        // Handle null/undefined values
-        if (value === null || value === undefined) {
-            return <span className="text-gray-400">-</span>;
-        }
+    // Handle save
+    const handleSave = (row: ListViewRow, rowIndex: number) => {
+        onRowAction?.('save', { ...row, data: editingRowData }, rowIndex);
+        setEditingRowId(null);
+        setEditingRowData({});
+    };
 
-        // Render based on field type using our components
-        switch (column.type) {
-            case 'enum':
-                return (
-                    <EnumField
-                        value={value}
-                        options={column.options || []}
-                        mode="readonly"
-                        {...(column.fieldProps || {})}
-                    />
-                );
+    // Handle cancel
+    const handleCancel = () => {
+        setEditingRowId(null);
+        setEditingRowData({});
+    };
 
-            case 'name':
-            case 'relate':
-                return (
-                    <NameField
-                        value={value}
-                        mode="readonly"
-                        link={column.type === 'name' || column.type === 'relate'}
-                        recordId={row.data[`${column.key}_id`]}
-                        module={row.data[`${column.key}_module`]}
-                        onLinkClick={
-                            column.fieldProps?.onLinkClick ||
-                            ((recordId, module) => {
-                                onRowAction?.('navigate', row, rowIndex);
-                            })
-                        }
-                        {...(column.fieldProps || {})}
-                    />
-                );
+    // Handle field change in edit mode
+    const handleFieldChange = (columnKey: string, newValue: any) => {
+        setEditingRowData((prev) => ({
+            ...prev,
+            [columnKey]: newValue,
+        }));
+    };
 
-            case 'email':
-            case 'phone':
-            case 'url':
-            case 'text':
-                return (
-                    <TextField
-                        value={value}
-                        mode="readonly"
-                        type={
-                            column.type === 'email'
-                                ? 'email'
-                                : column.type === 'phone'
-                                ? 'tel'
-                                : column.type === 'url'
-                                ? 'url'
-                                : 'text'
-                        }
-                        {...(column.fieldProps || {})}
-                    />
-                );
-
-            case 'custom':
-                // Custom type but no render function provided
-                return <div className="text-sm text-gray-900">{String(value)}</div>;
-
-            default:
-                // Default: plain text rendering
-                return <div className="text-sm text-gray-900">{String(value)}</div>;
-        }
+    // Toggle dropdown
+    const toggleDropdown = (rowId: string, event: React.MouseEvent) => {
+        event.stopPropagation();
+        setOpenDropdownId(openDropdownId === rowId ? null : rowId);
     };
 
     // Get column width style
@@ -439,59 +429,48 @@ export const ListView: React.FC<ListViewProps> = ({
                                     </div>
                                 </th>
                             ))}
+
+                            {/* Actions column header */}
+                            {hasRowActions && (
+                                <th className="w-16 px-4 py-3 text-right">
+                                    <span className="text-sm font-semibold text-gray-700">
+                                        Actions
+                                    </span>
+                                </th>
+                            )}
                         </tr>
                     </thead>
                 )}
 
                 <tbody className="bg-white divide-y divide-gray-200">
-                    {rows.map((row, rowIndex) => {
-                        const isSelected = internalSelectedIds.includes(row.id);
-                        const isClickable = clickableRows && !row.disabled;
-
-                        return (
-                            <tr
-                                key={row.id}
-                                className={`
-                                    ${hoverable && !row.disabled ? 'hover:bg-gray-50' : ''}
-                                    ${isSelected ? 'bg-blue-50' : ''}
-                                    ${isClickable ? 'cursor-pointer' : ''}
-                                    ${row.disabled ? 'opacity-50 cursor-not-allowed' : ''}
-                                    ${row.className || ''}
-                                `}
-                                onClick={(e) => handleRowClick(row, rowIndex, e)}
-                                onDoubleClick={() => handleRowDoubleClick(row, rowIndex)}
-                            >
-                                {/* Selection column */}
-                                {selectable && (
-                                    <td className="w-12 px-4 py-3">
-                                        <input
-                                            type="checkbox"
-                                            checked={isSelected}
-                                            disabled={row.disabled}
-                                            onChange={(e) => handleRowSelect(row.id, e as any)}
-                                            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                                        />
-                                    </td>
-                                )}
-
-                                {/* Data columns */}
-                                {visibleColumns.map((column) => (
-                                    <td
-                                        key={column.key}
-                                        className={`px-4 py-3 text-sm text-gray-900 ${
-                                            column.align === 'center'
-                                                ? 'text-center'
-                                                : column.align === 'right'
-                                                ? 'text-right'
-                                                : 'text-left'
-                                        }`}
-                                    >
-                                        {renderCell(column, row, rowIndex)}
-                                    </td>
-                                ))}
-                            </tr>
-                        );
-                    })}
+                    {rows.map((row, rowIndex) => (
+                        <ListViewRow
+                            key={row.id}
+                            row={row}
+                            rowIndex={rowIndex}
+                            columns={visibleColumns}
+                            selectable={selectable}
+                            isSelected={internalSelectedIds.includes(row.id)}
+                            isEditing={editingRowId === row.id}
+                            editingRowData={editingRowData}
+                            hoverable={hoverable}
+                            clickableRows={clickableRows}
+                            hasRowActions={hasRowActions}
+                            showEdit={showEdit}
+                            showDelete={showDelete}
+                            customActions={customActions}
+                            openDropdownId={openDropdownId}
+                            onSelect={handleRowSelect}
+                            onClick={handleRowClick}
+                            onDoubleClick={handleRowDoubleClick}
+                            onFieldChange={handleFieldChange}
+                            onSave={handleSave}
+                            onCancel={handleCancel}
+                            onToggleDropdown={toggleDropdown}
+                            onActionClick={handleActionClick}
+                            onRowAction={onRowAction}
+                        />
+                    ))}
                 </tbody>
             </table>
         </div>
