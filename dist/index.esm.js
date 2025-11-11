@@ -253,5 +253,188 @@ const NameField = ({ value, mode = 'edit', required = false, placeholder = 'Ente
     return (jsx("div", { className: "relative", children: jsx("input", { type: "text", value: "", disabled: true, placeholder: placeholder, className: "w-full px-3 py-2 text-sm bg-gray-50 text-gray-500 cursor-not-allowed border border-gray-200 rounded-lg shadow-sm focus:outline-none" }) }));
 };
 
-export { EnumField, NameField, TextField };
+const ListView = ({ columns, rows, selectable = false, multiSelect = true, selectedIds = [], sort, loading = false, emptyMessage = 'No data available', hoverable = true, clickableRows = false, className = '', showHeader = true, maxHeight, onSelectionChange, onRowClick, onRowDoubleClick, onSortChange, onColumnHeaderClick, onRowAction, }) => {
+    const [internalSelectedIds, setInternalSelectedIds] = useState(selectedIds);
+    const tableRef = useRef(null);
+    // Sync internal state with external selectedIds prop
+    useEffect(() => {
+        setInternalSelectedIds(selectedIds);
+    }, [selectedIds]);
+    // Get visible columns
+    const visibleColumns = columns.filter((col) => col.visible !== false);
+    // Check if all rows are selected
+    const allSelected = rows.length > 0 &&
+        rows.every((row) => row.disabled || internalSelectedIds.includes(row.id));
+    // Check if some rows are selected (for indeterminate state)
+    const someSelected = internalSelectedIds.length > 0 &&
+        !allSelected &&
+        rows.some((row) => internalSelectedIds.includes(row.id));
+    // Handle select all
+    const handleSelectAll = () => {
+        if (allSelected) {
+            // Deselect all
+            setInternalSelectedIds([]);
+            onSelectionChange?.([]);
+        }
+        else {
+            // Select all non-disabled rows
+            const allIds = rows.filter((row) => !row.disabled).map((row) => row.id);
+            setInternalSelectedIds(allIds);
+            onSelectionChange?.(allIds);
+        }
+    };
+    // Handle row selection
+    const handleRowSelect = (rowId, event) => {
+        let newSelectedIds;
+        if (multiSelect && event?.shiftKey) {
+            // Shift-click: select range
+            const currentIndex = rows.findIndex((r) => r.id === rowId);
+            const lastSelectedIndex = rows.findIndex((r) => internalSelectedIds.includes(r.id));
+            if (lastSelectedIndex >= 0) {
+                const start = Math.min(currentIndex, lastSelectedIndex);
+                const end = Math.max(currentIndex, lastSelectedIndex);
+                const rangeIds = rows
+                    .slice(start, end + 1)
+                    .filter((r) => !r.disabled)
+                    .map((r) => r.id);
+                newSelectedIds = Array.from(new Set([...internalSelectedIds, ...rangeIds]));
+            }
+            else {
+                newSelectedIds = [rowId];
+            }
+        }
+        else if (multiSelect && (event?.ctrlKey || event?.metaKey)) {
+            // Ctrl/Cmd-click: toggle selection
+            if (internalSelectedIds.includes(rowId)) {
+                newSelectedIds = internalSelectedIds.filter((id) => id !== rowId);
+            }
+            else {
+                newSelectedIds = [...internalSelectedIds, rowId];
+            }
+        }
+        else if (multiSelect) {
+            // Regular click in multi-select mode: toggle
+            if (internalSelectedIds.includes(rowId)) {
+                newSelectedIds = internalSelectedIds.filter((id) => id !== rowId);
+            }
+            else {
+                newSelectedIds = [...internalSelectedIds, rowId];
+            }
+        }
+        else {
+            // Single select mode
+            newSelectedIds = internalSelectedIds.includes(rowId) ? [] : [rowId];
+        }
+        setInternalSelectedIds(newSelectedIds);
+        onSelectionChange?.(newSelectedIds);
+    };
+    // Handle sort
+    const handleSort = (columnKey) => {
+        const column = columns.find((col) => col.key === columnKey);
+        if (!column?.sortable)
+            return;
+        const newDirection = sort?.columnKey === columnKey && sort.direction === 'asc' ? 'desc' : 'asc';
+        onSortChange?.({
+            columnKey,
+            direction: newDirection,
+        });
+    };
+    // Handle row click
+    const handleRowClick = (row, rowIndex, event) => {
+        if (row.disabled)
+            return;
+        // Don't trigger row click if clicking on checkbox or interactive elements
+        const target = event.target;
+        if (target.closest('input[type="checkbox"]') ||
+            target.closest('button') ||
+            target.closest('a')) {
+            return;
+        }
+        onRowClick?.(row, rowIndex);
+    };
+    // Handle row double click
+    const handleRowDoubleClick = (row, rowIndex) => {
+        if (row.disabled)
+            return;
+        onRowDoubleClick?.(row, rowIndex);
+    };
+    // Render cell content
+    const renderCell = (column, row, rowIndex) => {
+        const value = row.data[column.key];
+        // Use custom render if provided
+        if (column.render) {
+            return column.render(value, row.data, rowIndex);
+        }
+        // Handle null/undefined values
+        if (value === null || value === undefined) {
+            return jsx("span", { className: "text-gray-400", children: "-" });
+        }
+        // Render based on field type using our components
+        switch (column.type) {
+            case 'enum':
+                return (jsx(EnumField, { value: value, options: column.options || [], mode: "readonly", ...(column.fieldProps || {}) }));
+            case 'name':
+            case 'relate':
+                return (jsx(NameField, { value: value, mode: "readonly", link: column.type === 'name' || column.type === 'relate', recordId: row.data[`${column.key}_id`], module: row.data[`${column.key}_module`], onLinkClick: column.fieldProps?.onLinkClick ||
+                        ((recordId, module) => {
+                            onRowAction?.('navigate', row, rowIndex);
+                        }), ...(column.fieldProps || {}) }));
+            case 'email':
+            case 'phone':
+            case 'url':
+            case 'text':
+                return (jsx(TextField, { value: value, mode: "readonly", type: column.type === 'email' ? 'email' : column.type === 'phone' ? 'tel' : column.type === 'url' ? 'url' : 'text', ...(column.fieldProps || {}) }));
+            case 'custom':
+                // Custom type but no render function provided
+                return jsx("div", { className: "text-sm text-gray-900", children: String(value) });
+            default:
+                // Default: plain text rendering
+                return jsx("div", { className: "text-sm text-gray-900", children: String(value) });
+        }
+    };
+    // Get column width style
+    const getColumnWidth = (column) => {
+        if (!column.width)
+            return undefined;
+        return typeof column.width === 'number' ? `${column.width}px` : column.width;
+    };
+    // Loading state
+    if (loading) {
+        return (jsx("div", { className: "w-full p-8 text-center", children: jsxs("div", { className: "inline-flex items-center gap-2 text-gray-600", children: [jsxs("svg", { className: "w-5 h-5 animate-spin", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: [jsx("circle", { className: "opacity-25", cx: "12", cy: "12", r: "10", strokeWidth: "4" }), jsx("path", { className: "opacity-75", fill: "currentColor", d: "M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" })] }), jsx("span", { children: "Loading..." })] }) }));
+    }
+    // Empty state
+    if (rows.length === 0) {
+        return (jsx("div", { className: "w-full p-8 text-center", children: jsx("div", { className: "text-gray-500", children: emptyMessage }) }));
+    }
+    return (jsx("div", { ref: tableRef, className: `w-full overflow-auto ${className}`, style: { maxHeight: maxHeight ? (typeof maxHeight === 'number' ? `${maxHeight}px` : maxHeight) : undefined }, children: jsxs("table", { className: "w-full border-collapse", children: [showHeader && (jsx("thead", { className: "bg-gray-50 sticky top-0 z-10", children: jsxs("tr", { className: "border-b border-gray-200", children: [selectable && (jsx("th", { className: "w-12 px-4 py-3 text-left", children: multiSelect && (jsx("input", { type: "checkbox", checked: allSelected, ref: (input) => {
+                                        if (input) {
+                                            input.indeterminate = someSelected;
+                                        }
+                                    }, onChange: handleSelectAll, className: "w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500" })) })), visibleColumns.map((column) => (jsx("th", { style: { width: getColumnWidth(column) }, className: `px-4 py-3 text-sm font-semibold text-gray-700 ${column.align === 'center'
+                                    ? 'text-center'
+                                    : column.align === 'right'
+                                        ? 'text-right'
+                                        : 'text-left'} ${column.sortable ? 'cursor-pointer hover:bg-gray-100' : ''}`, onClick: () => {
+                                    if (column.sortable) {
+                                        handleSort(column.key);
+                                    }
+                                    onColumnHeaderClick?.(column);
+                                }, children: jsxs("div", { className: "flex items-center gap-2", children: [jsx("span", { children: column.label }), column.sortable && (jsx("span", { className: "text-gray-400", children: sort?.columnKey === column.key ? (sort.direction === 'asc' ? (jsx("svg", { className: "w-4 h-4", fill: "currentColor", viewBox: "0 0 20 20", children: jsx("path", { fillRule: "evenodd", d: "M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z", clipRule: "evenodd" }) })) : (jsx("svg", { className: "w-4 h-4", fill: "currentColor", viewBox: "0 0 20 20", children: jsx("path", { fillRule: "evenodd", d: "M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z", clipRule: "evenodd" }) }))) : (jsx("svg", { className: "w-4 h-4 opacity-0 group-hover:opacity-100", fill: "currentColor", viewBox: "0 0 20 20", children: jsx("path", { d: "M5 12a1 1 0 102 0V6.414l1.293 1.293a1 1 0 001.414-1.414l-3-3a1 1 0 00-1.414 0l-3 3a1 1 0 001.414 1.414L5 6.414V12zM15 8a1 1 0 10-2 0v5.586l-1.293-1.293a1 1 0 00-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L15 13.586V8z" }) })) }))] }) }, column.key)))] }) })), jsx("tbody", { className: "bg-white divide-y divide-gray-200", children: rows.map((row, rowIndex) => {
+                        const isSelected = internalSelectedIds.includes(row.id);
+                        const isClickable = clickableRows && !row.disabled;
+                        return (jsxs("tr", { className: `
+                                    ${hoverable && !row.disabled ? 'hover:bg-gray-50' : ''}
+                                    ${isSelected ? 'bg-blue-50' : ''}
+                                    ${isClickable ? 'cursor-pointer' : ''}
+                                    ${row.disabled ? 'opacity-50 cursor-not-allowed' : ''}
+                                    ${row.className || ''}
+                                `, onClick: (e) => handleRowClick(row, rowIndex, e), onDoubleClick: () => handleRowDoubleClick(row, rowIndex), children: [selectable && (jsx("td", { className: "w-12 px-4 py-3", children: jsx("input", { type: "checkbox", checked: isSelected, disabled: row.disabled, onChange: (e) => handleRowSelect(row.id, e), className: "w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed" }) })), visibleColumns.map((column) => (jsx("td", { className: `px-4 py-3 text-sm text-gray-900 ${column.align === 'center'
+                                        ? 'text-center'
+                                        : column.align === 'right'
+                                            ? 'text-right'
+                                            : 'text-left'}`, children: renderCell(column, row, rowIndex) }, column.key)))] }, row.id));
+                    }) })] }) }));
+};
+
+export { EnumField, ListView, NameField, TextField };
 //# sourceMappingURL=index.esm.js.map
