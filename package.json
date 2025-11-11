@@ -6,11 +6,14 @@
   "main": "dist/index.js",
   "module": "dist/index.esm.js",
   "types": "dist/index.d.ts",
+  "style": "dist/ui-react-components.css",
   "files": [
-    "dist"
+    "dist",
+    "adapters"
   ],
   "scripts": {
     "build": "rollup -c",
+    "postbuild": "node -e \"console.log('✅ Build complete!'); console.log('📦 Files:', require('fs').readdirSync('dist').join(', '));\"",
     "dev": "rollup -c -w",
     "test": "jest",
     "test:watch": "jest --watch",

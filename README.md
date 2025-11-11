@@ -2,43 +2,70 @@
 
 Agnostic React component library for Sugar CRM.
 
+## Installation
+
+```bash
+npm install @ui/react-components
+```
+
+**Important: CSS Required**
+
+```javascript
+// Import CSS
+import '@ui/react-components/dist/ui-react-components.css';
+
+// Import components
+import { EnumField, TextField, NameField } from '@ui/react-components';
+```
+
+### Or via CDN (for Sugar CRM)
+
+```html
+<!-- In your tpls/sidecar.tpl -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/rtinca-sugarcrm/foundry@main/dist/ui-react-components.css">
+<script src="https://cdn.jsdelivr.net/gh/rtinca-sugarcrm/foundry@main/dist/ui-react-components.umd.js"></script>
+```
+
 ## What is this?
 
 A collection of reusable React components designed to work with Sugar CRM through adapters. Components are framework-agnostic and can be used in any React application.
-
-## Technologies
-
-- **React 18** - UI library
-- **TypeScript** - Type safety
-- **Tailwind CSS v4** - Utility-first styling
-- **Rollup** - Module bundler
-- **Storybook** - Component development and documentation
 
 ## Components
 
 ### EnumField
 
-A dropdown component with search and multi-select support.
+Dropdown with search and multi-select support.
 
-```tsx
-import { EnumField } from '@sugar/ui-react';
+### TextField
 
-<EnumField
-  value={value}
-  options={[
-    { value: 'new', label: 'New' },
-    { value: 'in_progress', label: 'In Progress' },
-  ]}
-  onChange={(newValue) => setValue(newValue)}
-/>
+Text input with support for various types (text, email, password, textarea, etc.).
+
+### NameField
+
+Name field with linking and focus drawer support for Sugar CRM.
+
+## Sugar CRM Integration
+
+### 1. Load via CDN (in tpls/sidecar.tpl)
+
+```html
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/rtinca-sugarcrm/foundry@main/dist/ui-react-components.css">
+<script src="https://cdn.jsdelivr.net/gh/rtinca-sugarcrm/foundry@main/dist/ui-react-components.umd.js"></script>
 ```
 
-**Features:**
-- Single and multi-select
-- Searchable
-- Error states
-- Disabled options
-- Custom styling
+### 2. Use Field Adapters
+
+Copy adapters from `adapters/` folder to Sugar:
+- `enum-field-adapter.js` → `custom/clients/base/fields/enum/enum.js`
+- `text-field-adapter.js` → `custom/clients/base/fields/text/text.js`
+- `name-field-adapter.js` → `custom/clients/base/fields/name/name.js`
+
+Each adapter needs a template:
+
+```handlebars
+{{!-- custom/clients/base/fields/enum/enum.hbs --}}
+<div class="external-react-root"></div>
+```
 
 ## Development
 
@@ -54,39 +81,6 @@ npm run build
 
 # Run tests
 npm test
-```
-
-## Build Output
-
-```
-dist/
-  ├── index.js          # CommonJS bundle
-  ├── index.esm.js      # ES Module bundle
-  ├── index.css         # Styles
-  └── index.d.ts        # TypeScript definitions
-```
-
-## Usage in Sugar CRM
-
-Components are loaded via a Sugar field adapter:
-
-```javascript
-// custom/clients/base/fields/enum/enum.js
-({
-  plugins: ['ReactPlugin'],
-  
-  getReactComponent() {
-    return window.SugarUIReact.EnumField;
-  },
-  
-  getReactProps() {
-    return {
-      value: this.model.get(this.name),
-      options: this.getOptions(),
-      onChange: (value) => this.model.set(this.name, value),
-    };
-  },
-})
 ```
 
 ## License

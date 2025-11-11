@@ -114,5 +114,125 @@ const EnumField = ({ value, options, mode = 'edit', multiple = false, searchable
                         })) })] }))] }));
 };
 
+const TextField = ({ value, mode = 'edit', type = 'text', required = false, placeholder = '', error, maxLength, minLength, pattern, autoComplete, autoFocus = false, multiline = false, rows = 3, onChange, onBlur, onFocus, }) => {
+    const [isFocused, setIsFocused] = react.useState(false);
+    const inputRef = react.useRef(null);
+    const textareaRef = react.useRef(null);
+    const isReadonly = mode === 'readonly';
+    const isDisabled = mode === 'disabled';
+    // Handle value change
+    const handleChange = (e) => {
+        if (isDisabled || isReadonly)
+            return;
+        const newValue = e.target.value;
+        onChange?.(newValue === '' ? null : newValue);
+    };
+    // Handle focus
+    const handleFocus = () => {
+        setIsFocused(true);
+        onFocus?.();
+    };
+    // Handle blur
+    const handleBlur = () => {
+        setIsFocused(false);
+        onBlur?.();
+    };
+    // Readonly mode - just show the text
+    if (isReadonly) {
+        return (jsxRuntime.jsx("div", { className: "text-sm text-gray-900", children: multiline ? (jsxRuntime.jsx("div", { className: "whitespace-pre-wrap", children: value || '-' })) : (jsxRuntime.jsx("span", { children: value || '-' })) }));
+    }
+    // Common input classes
+    const inputClasses = `
+        w-full px-3 py-2 text-sm
+        bg-white border rounded-lg shadow-sm
+        transition-colors duration-150
+        ${isDisabled
+        ? 'bg-gray-50 text-gray-500 cursor-not-allowed border-gray-200'
+        : error
+            ? 'border-red-300 focus:border-red-500 focus:ring-2 focus:ring-red-200'
+            : isFocused
+                ? 'border-blue-500 ring-2 ring-blue-200'
+                : 'border-gray-300 hover:border-gray-400'}
+        ${required && !value ? 'border-red-300' : ''}
+        focus:outline-none
+    `;
+    // Edit or Disabled mode - show input/textarea
+    return (jsxRuntime.jsxs("div", { className: "relative", children: [multiline ? (jsxRuntime.jsx("textarea", { ref: textareaRef, value: value || '', onChange: handleChange, onFocus: handleFocus, onBlur: handleBlur, placeholder: placeholder, disabled: isDisabled, required: required, maxLength: maxLength, minLength: minLength, rows: rows, autoFocus: autoFocus, className: `${inputClasses} resize-y` })) : (jsxRuntime.jsx("input", { ref: inputRef, type: type, value: value || '', onChange: handleChange, onFocus: handleFocus, onBlur: handleBlur, placeholder: placeholder, disabled: isDisabled, required: required, maxLength: maxLength, minLength: minLength, pattern: pattern, autoComplete: autoComplete, autoFocus: autoFocus, className: inputClasses })), maxLength && !isDisabled && (jsxRuntime.jsxs("div", { className: "mt-1 text-xs text-right text-gray-500", children: [(value || '').length, " / ", maxLength] })), error && (jsxRuntime.jsxs("div", { className: "mt-1 flex items-center gap-1 text-xs text-red-600", children: [jsxRuntime.jsx("svg", { className: "w-4 h-4", fill: "currentColor", viewBox: "0 0 20 20", children: jsxRuntime.jsx("path", { fillRule: "evenodd", d: "M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z", clipRule: "evenodd" }) }), error] }))] }));
+};
+
+const NameField = ({ value, mode = 'edit', required = false, placeholder = 'Enter name...', error, maxLength, link = false, recordId, module, showFocusIcon = false, onLinkClick, onFocusClick, onChange, onBlur, onFocus, }) => {
+    const [isFocused, setIsFocused] = react.useState(false);
+    const inputRef = react.useRef(null);
+    const isReadonly = mode === 'readonly';
+    const isDisabled = mode === 'disabled';
+    const isEditable = mode === 'edit';
+    // Handle value change
+    const handleChange = (e) => {
+        if (isDisabled || isReadonly)
+            return;
+        const newValue = e.target.value;
+        onChange?.(newValue === '' ? null : newValue);
+    };
+    // Handle focus
+    const handleFocus = () => {
+        setIsFocused(true);
+        onFocus?.();
+    };
+    // Handle blur
+    const handleBlur = () => {
+        setIsFocused(false);
+        onBlur?.();
+    };
+    // Handle link click
+    const handleLinkClick = (e) => {
+        e.preventDefault();
+        if (recordId && module && onLinkClick) {
+            onLinkClick(recordId, module);
+        }
+    };
+    // Handle focus icon click
+    const handleFocusIconClick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (recordId && module && onFocusClick) {
+            onFocusClick(recordId, module);
+        }
+    };
+    // Handle keyboard navigation for focus icon
+    const handleFocusIconKeyUp = (e) => {
+        if (e.key === 'Enter' && recordId && module && onFocusClick) {
+            e.preventDefault();
+            onFocusClick(recordId, module);
+        }
+    };
+    // Render readonly/disabled mode with optional link
+    if (isReadonly || (isDisabled && value)) {
+        const displayValue = value || '-';
+        const canShowLink = link && recordId && module && !isDisabled;
+        const canShowFocusIcon = showFocusIcon && recordId && module && value && !isDisabled;
+        return (jsxRuntime.jsxs("div", { className: "flex items-center gap-2 text-sm text-gray-900", children: [canShowLink ? (jsxRuntime.jsx("a", { href: "#", onClick: handleLinkClick, className: "text-blue-600 hover:text-blue-800 hover:underline focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 rounded", "data-link-target": "focus", "data-module": module, "data-model-id": recordId, children: displayValue })) : (jsxRuntime.jsx("span", { children: displayValue })), canShowFocusIcon && (jsxRuntime.jsx("div", { className: "focus-icon-container", children: jsxRuntime.jsx("button", { type: "button", onClick: handleFocusIconClick, onKeyUp: handleFocusIconKeyUp, className: "focus-icon inline-flex items-center justify-center w-5 h-5 text-gray-500 hover:text-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded transition-colors", "aria-label": "Open in focus drawer", tabIndex: 0, children: jsxRuntime.jsxs("svg", { className: "w-4 h-4", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: [jsxRuntime.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M15 12a3 3 0 11-6 0 3 3 0 016 0z" }), jsxRuntime.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" })] }) }) }))] }));
+    }
+    // Render edit mode
+    if (isEditable) {
+        const inputClasses = `
+            w-full px-3 py-2 text-sm
+            bg-white border rounded-lg shadow-sm
+            transition-colors duration-150
+            ${error
+            ? 'border-red-300 focus:border-red-500 focus:ring-2 focus:ring-red-200'
+            : isFocused
+                ? 'border-blue-500 ring-2 ring-blue-200'
+                : 'border-gray-300 hover:border-gray-400'}
+            ${required && !value ? 'border-red-300' : ''}
+            focus:outline-none
+        `;
+        return (jsxRuntime.jsxs("div", { className: "relative", children: [jsxRuntime.jsx("input", { ref: inputRef, type: "text", value: value || '', onChange: handleChange, onFocus: handleFocus, onBlur: handleBlur, placeholder: placeholder, required: required, maxLength: maxLength, className: inputClasses }), maxLength && (jsxRuntime.jsxs("div", { className: "mt-1 text-xs text-right text-gray-500", children: [(value || '').length, " / ", maxLength] })), error && (jsxRuntime.jsxs("div", { className: "mt-1 flex items-center gap-1 text-xs text-red-600", children: [jsxRuntime.jsx("svg", { className: "w-4 h-4", fill: "currentColor", viewBox: "0 0 20 20", children: jsxRuntime.jsx("path", { fillRule: "evenodd", d: "M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z", clipRule: "evenodd" }) }), error] }))] }));
+    }
+    // Disabled mode with no value - show disabled input
+    return (jsxRuntime.jsx("div", { className: "relative", children: jsxRuntime.jsx("input", { type: "text", value: "", disabled: true, placeholder: placeholder, className: "w-full px-3 py-2 text-sm bg-gray-50 text-gray-500 cursor-not-allowed border border-gray-200 rounded-lg shadow-sm focus:outline-none" }) }));
+};
+
 exports.EnumField = EnumField;
+exports.NameField = NameField;
+exports.TextField = TextField;
 //# sourceMappingURL=index.js.map

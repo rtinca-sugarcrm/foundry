@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EnumField Test</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="p-8">
+  <h1 class="text-2xl font-bold mb-4">EnumField Test</h1>
+  
+  <!-- Container for the dropdown -->
+  <div id="my-enum-field"></div>
+  
+  <!-- React -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  
+  <!-- Your Component -->
+  <script src="https://cdn.jsdelivr.net/gh/rtinca-sugarcrm/foundry@main/dist/ui-react-components.umd.js"></script>
+  
+  <script>
+    const { useState, createElement } = React;
+    const { EnumField } = window.UIReactComponents;
+    
+    // Create a wrapper component with state
+    function App() {
+      const [value, setValue] = useState('active');
+      
+      return createElement(EnumField, {
+        value: value,
+        options: [
+          { value: 'active', label: 'Active' },
+          { value: 'inactive', label: 'Inactive' },
+          { value: 'pending', label: 'Pending' }
+        ],
+        placeholder: 'Select status',
+        onChange: (newValue) => {
+          console.log('Selected:', newValue);
+          setValue(newValue); // Update state!
+        }
+      });
+    }
+    
+    // Render
+    ReactDOM.render(
+      createElement(App),
+      document.getElementById('my-enum-field')
+    );
+  </script>
+</body>
+</html>

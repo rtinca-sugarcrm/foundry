@@ -1,88 +1,73 @@
-# Hosting the UMD Bundle
-
-You now have a **UMD bundle** ready to be hosted and used anywhere!
+# Hosting the React Components
 
 ## 📦 Built Files
 
-- `dist/ui-react-components.umd.js` (18KB minified) - The component bundle
-- `dist/example.html` - Demo showing how to use it
+After running `npm run build`, you get:
 
-## 🚀 Hosting Options
+- `dist/ui-react-components.umd.js` - The component bundle
+- `dist/ui-react-components.css` - Required CSS file
+- `dist/index.esm.js` - ES Module version
+- `dist/index.js` - CommonJS version
 
-### Option 1: GitHub Pages (Free & Easy)
+## 🚀 CDN Usage (jsDelivr)
 
-1. **Enable GitHub Pages:**
-   ```bash
-   git add dist/
-   git commit -m "Add UMD bundle"
-   git push origin main
-   ```
-
-2. **Go to repo settings → Pages → Deploy from branch → `main/dist`**
-
-3. **Use in Sugar:**
-   ```html
-   <script src="https://USERNAME.github.io/REPO/ui-react-components.umd.js"></script>
-   ```
-
-### Option 2: AWS S3 + CloudFront (Production)
-
-```bash
-# Upload to S3
-aws s3 cp dist/ui-react-components.umd.js s3://your-bucket/ui-components/v1.0.0/
-
-# Make public
-aws s3api put-object-acl --bucket your-bucket --key ui-components/v1.0.0/ui-react-components.umd.js --acl public-read
-```
-
-### Option 3: Internal CDN
-
-Just copy `dist/ui-react-components.umd.js` to your company's CDN or static file server.
-
-### Option 4: NPM CDN (if published to NPM)
+jsDelivr automatically hosts GitHub repositories. Use this in Sugar CRM:
 
 ```html
-<script src="https://unpkg.com/@ui/react-components@0.1.0/dist/ui-react-components.umd.js"></script>
+<!-- In tpls/sidecar.tpl -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/rtinca-sugarcrm/foundry@main/dist/ui-react-components.css">
+<script src="https://cdn.jsdelivr.net/gh/rtinca-sugarcrm/foundry@main/dist/ui-react-components.umd.js"></script>
 ```
 
-## 📝 Usage in Sugar
+### Version Pinning
+
+```html
+<!-- Use specific commit -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/rtinca-sugarcrm/foundry@COMMIT_SHA/dist/ui-react-components.css">
+<script src="https://cdn.jsdelivr.net/gh/rtinca-sugarcrm/foundry@COMMIT_SHA/dist/ui-react-components.umd.js"></script>
+
+<!-- Or use a tag -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/rtinca-sugarcrm/foundry@v1.0.0/dist/ui-react-components.css">
+<script src="https://cdn.jsdelivr.net/gh/rtinca-sugarcrm/foundry@v1.0.0/dist/ui-react-components.umd.js"></script>
+```
+
+## 📝 Usage in Sugar CRM
 
 ### HTML Approach (Direct Load):
 
 ```html
-<!DOCTYPE html>
-<html>
-<head>
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- React -->
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    
-    <!-- Your Components -->
-    <script src="https://YOUR-HOST/ui-react-components.umd.js"></script>
-</head>
-<body>
-    <div id="root"></div>
-    <script>
-        const { EnumField } = window.UIReactComponents;
-        
-        // Use it!
-        ReactDOM.render(
-            React.createElement(EnumField, {
-                value: 'option1',
-                options: [
-                    { value: 'option1', label: 'Option 1' },
-                    { value: 'option2', label: 'Option 2' },
-                ],
-                onChange: (value) => console.log(value)
-            }),
-            document.getElementById('root')
-        );
-    </script>
-</body>
-</html>
+## 📝 Usage in Sugar CRM
+
+Components are available globally as `window.UIReactComponents`:
+
+```javascript
+const { EnumField, TextField, NameField } = window.UIReactComponents;
+
+// Use in your field adapter
+getProps() {
+    return {
+        value: this.model.get(this.name),
+        options: this._getOptions(),
+        onChange: (value) => this.model.set(this.name, value),
+    };
+}
+```
+
+See the `adapters/` folder for complete Sugar field adapters.
+
+## 🔄 Versioning
+
+For production, pin to a specific version:
+
+```html
+<!-- Use a git tag -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/rtinca-sugarcrm/foundry@v1.0.0/dist/ui-react-components.css">
+<script src="https://cdn.jsdelivr.net/gh/rtinca-sugarcrm/foundry@v1.0.0/dist/ui-react-components.umd.js"></script>
+
+<!-- Or use a commit SHA -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/rtinca-sugarcrm/foundry@abc123/dist/ui-react-components.css">
+<script src="https://cdn.jsdelivr.net/gh/rtinca-sugarcrm/foundry@abc123/dist/ui-react-components.umd.js"></script>
+```
 ```
 
 ### JavaScript/TypeScript Module Approach:
