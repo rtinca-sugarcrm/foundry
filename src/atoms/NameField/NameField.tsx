@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 
 export interface NameFieldProps {
     value: string | null;
@@ -42,6 +42,7 @@ export const NameField: React.FC<NameFieldProps> = ({
     onBlur,
     onFocus,
 }) => {
+    const [internalValue, setInternalValue] = useState<string | null>(value);
     const [isFocused, setIsFocused] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
 
@@ -49,11 +50,18 @@ export const NameField: React.FC<NameFieldProps> = ({
     const isDisabled = mode === 'disabled';
     const isEditable = mode === 'edit';
 
+    // Sync internal state when external value prop changes
+    useEffect(() => {
+        setInternalValue(value);
+    }, [value]);
+
     // Handle value change
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (isDisabled || isReadonly) return;
         const newValue = e.target.value;
-        onChange?.(newValue === '' ? null : newValue);
+        const finalValue = newValue === '' ? null : newValue;
+        setInternalValue(finalValue);
+        onChange?.(finalValue);
     };
 
     // Handle focus
@@ -94,10 +102,11 @@ export const NameField: React.FC<NameFieldProps> = ({
     };
 
     // Render readonly/disabled mode with optional link
-    if (isReadonly || (isDisabled && value)) {
-        const displayValue = value || '-';
+    if (isReadonly || (isDisabled && internalValue)) {
+        const displayValue = internalValue || '-';
         const canShowLink = link && recordId && module && !isDisabled;
-        const canShowFocusIcon = showFocusIcon && recordId && module && value && !isDisabled;
+        const canShowFocusIcon =
+            showFocusIcon && recordId && module && internalValue && !isDisabled;
 
         return (
             <div className="flex items-center gap-2 text-sm text-gray-900">
@@ -165,7 +174,7 @@ export const NameField: React.FC<NameFieldProps> = ({
                     ? 'border-blue-500 ring-2 ring-blue-200'
                     : 'border-gray-300 hover:border-gray-400'
             }
-            ${required && !value ? 'border-red-300' : ''}
+            ${required && !internalValue ? 'border-red-300' : ''}
             focus:outline-none
         `;
 
@@ -174,7 +183,7 @@ export const NameField: React.FC<NameFieldProps> = ({
                 <input
                     ref={inputRef}
                     type="text"
-                    value={value || ''}
+                    value={internalValue || ''}
                     onChange={handleChange}
                     onFocus={handleFocus}
                     onBlur={handleBlur}
@@ -187,7 +196,7 @@ export const NameField: React.FC<NameFieldProps> = ({
                 {/* Character Counter */}
                 {maxLength && (
                     <div className="mt-1 text-xs text-right text-gray-500">
-                        {(value || '').length} / {maxLength}
+                        {(internalValue || '').length} / {maxLength}
                     </div>
                 )}
 

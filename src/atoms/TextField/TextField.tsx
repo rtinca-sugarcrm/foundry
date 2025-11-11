@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 
 export interface TextFieldProps {
     value: string | null;
@@ -37,6 +37,7 @@ export const TextField: React.FC<TextFieldProps> = ({
     onBlur,
     onFocus,
 }) => {
+    const [internalValue, setInternalValue] = useState<string | null>(value);
     const [isFocused, setIsFocused] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -44,14 +45,21 @@ export const TextField: React.FC<TextFieldProps> = ({
     const isReadonly = mode === 'readonly';
     const isDisabled = mode === 'disabled';
 
+    // Sync internal state when external value prop changes
+    useEffect(() => {
+        setInternalValue(value);
+    }, [value]);
+
     // Get display text for the current value
-    const displayText = value || placeholder;
+    const displayText = internalValue || placeholder;
 
     // Handle value change
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         if (isDisabled || isReadonly) return;
         const newValue = e.target.value;
-        onChange?.(newValue === '' ? null : newValue);
+        const finalValue = newValue === '' ? null : newValue;
+        setInternalValue(finalValue);
+        onChange?.(finalValue);
     };
 
     // Handle focus
@@ -71,9 +79,9 @@ export const TextField: React.FC<TextFieldProps> = ({
         return (
             <div className="text-sm text-gray-900">
                 {multiline ? (
-                    <div className="whitespace-pre-wrap">{value || '-'}</div>
+                    <div className="whitespace-pre-wrap">{internalValue || '-'}</div>
                 ) : (
-                    <span>{value || '-'}</span>
+                    <span>{internalValue || '-'}</span>
                 )}
             </div>
         );
@@ -93,7 +101,7 @@ export const TextField: React.FC<TextFieldProps> = ({
                 ? 'border-blue-500 ring-2 ring-blue-200'
                 : 'border-gray-300 hover:border-gray-400'
         }
-        ${required && !value ? 'border-red-300' : ''}
+        ${required && !internalValue ? 'border-red-300' : ''}
         focus:outline-none
     `;
 
@@ -103,7 +111,7 @@ export const TextField: React.FC<TextFieldProps> = ({
             {multiline ? (
                 <textarea
                     ref={textareaRef}
-                    value={value || ''}
+                    value={internalValue || ''}
                     onChange={handleChange}
                     onFocus={handleFocus}
                     onBlur={handleBlur}
@@ -120,7 +128,7 @@ export const TextField: React.FC<TextFieldProps> = ({
                 <input
                     ref={inputRef}
                     type={type}
-                    value={value || ''}
+                    value={internalValue || ''}
                     onChange={handleChange}
                     onFocus={handleFocus}
                     onBlur={handleBlur}
@@ -139,7 +147,7 @@ export const TextField: React.FC<TextFieldProps> = ({
             {/* Character Counter */}
             {maxLength && !isDisabled && (
                 <div className="mt-1 text-xs text-right text-gray-500">
-                    {(value || '').length} / {maxLength}
+                    {(internalValue || '').length} / {maxLength}
                 </div>
             )}
 

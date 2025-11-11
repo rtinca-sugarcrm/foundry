@@ -29,6 +29,7 @@ export const EnumField: React.FC<EnumFieldProps> = ({
     error,
     onChange,
 }) => {
+    const [internalValue, setInternalValue] = useState<string | string[] | null>(value);
     const [isOpen, setIsOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const containerRef = useRef<HTMLDivElement>(null);
@@ -36,6 +37,11 @@ export const EnumField: React.FC<EnumFieldProps> = ({
 
     const isReadonly = mode === 'readonly';
     const isDisabled = mode === 'disabled';
+
+    // Sync internal state when external value prop changes
+    useEffect(() => {
+        setInternalValue(value);
+    }, [value]);
 
     // Close dropdown on outside click
     useEffect(() => {
@@ -61,18 +67,18 @@ export const EnumField: React.FC<EnumFieldProps> = ({
 
     // Get display text for selected value(s)
     const displayText = (() => {
-        if (!value || (Array.isArray(value) && value.length === 0)) {
+        if (!internalValue || (Array.isArray(internalValue) && internalValue.length === 0)) {
             return placeholder;
         }
 
-        if (Array.isArray(value)) {
+        if (Array.isArray(internalValue)) {
             const selectedLabels = options
-                .filter((opt) => value.includes(opt.value))
+                .filter((opt) => internalValue.includes(opt.value))
                 .map((opt) => opt.label);
             return selectedLabels.length > 0 ? selectedLabels.join(', ') : placeholder;
         }
 
-        const selectedOption = options.find((opt) => opt.value === value);
+        const selectedOption = options.find((opt) => opt.value === internalValue);
         return selectedOption?.label || placeholder;
     })();
 
@@ -81,12 +87,15 @@ export const EnumField: React.FC<EnumFieldProps> = ({
         if (isDisabled) return;
 
         if (multiple) {
-            const currentValues = Array.isArray(value) ? value : [];
+            const currentValues = Array.isArray(internalValue) ? internalValue : [];
             const newValues = currentValues.includes(optionValue)
                 ? currentValues.filter((v) => v !== optionValue)
                 : [...currentValues, optionValue];
-            onChange?.(newValues.length > 0 ? newValues : null);
+            const finalValue = newValues.length > 0 ? newValues : null;
+            setInternalValue(finalValue);
+            onChange?.(finalValue);
         } else {
+            setInternalValue(optionValue);
             onChange?.(optionValue);
             setIsOpen(false);
             setSearchQuery('');
@@ -100,10 +109,10 @@ export const EnumField: React.FC<EnumFieldProps> = ({
 
     // Check if option is selected
     const isSelected = (optionValue: string): boolean => {
-        if (Array.isArray(value)) {
-            return value.includes(optionValue);
+        if (Array.isArray(internalValue)) {
+            return internalValue.includes(optionValue);
         }
-        return value === optionValue;
+        return internalValue === optionValue;
     };
 
     // Readonly mode - just show the text
@@ -131,12 +140,13 @@ export const EnumField: React.FC<EnumFieldProps> = ({
                             ? 'border-red-300 focus:border-red-500 focus:ring-2 focus:ring-red-200'
                             : 'border-gray-300 hover:border-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200'
                     }
-                    ${required && !value ? 'border-red-300' : ''}
+                    ${required && !internalValue ? 'border-red-300' : ''}
                 `}
             >
                 <span
                     className={`flex-1 truncate ${
-                        !value || (Array.isArray(value) && value.length === 0)
+                        !internalValue ||
+                        (Array.isArray(internalValue) && internalValue.length === 0)
                             ? 'text-gray-400'
                             : 'text-gray-900'
                     }`}
